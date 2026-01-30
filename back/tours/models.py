@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.db.models import Q
 
 
 # Create your models here.
@@ -23,11 +24,17 @@ class Tour(models.Model):
 
 
     def clean(self):
+        self.start_time = self.start_time.replace(second=0, microsecond=0)
+        self.end_time = self.end_time.replace(second=0, microsecond=0)
         if self.property:
             overlapping_property_tours = Tour.objects.filter(
-                property=self.property,
-                start_time__lt=self.end_time,
-                end_time__gt=self.start_time
+                Q(property=self.property) & (
+                    (
+            (Q(start_time__lte=self.start_time) & Q(end_time__gte=self.start_time)) |
+            (Q(start_time__lte=self.end_time) & Q(end_time__gte=self.end_time)) |
+            (Q(start_time__gte=self.start_time) & Q(end_time__lte=self.end_time)) 
+            )
+                )
             )
 
             if self.pk:
@@ -38,9 +45,12 @@ class Tour(models.Model):
 
         if self.agent:
             overlapping_agent_tours = Tour.objects.filter(
-                agent=self.agent,
-                start_time__lt=self.end_time,
-                end_time__gt=self.start_time
+                Q(agent=self.agent) &
+                (
+            (Q(start_time__lte=self.start_time) & Q(end_time__gte=self.start_time)) |
+            (Q(start_time__lte=self.end_time) & Q(end_time__gte=self.end_time)) |
+            (Q(start_time__gte=self.start_time) & Q(end_time__lte=self.end_time)) 
+            )
             )
 
             if self.pk:
@@ -51,6 +61,11 @@ class Tour(models.Model):
 
         if self.start_time >= self.end_time:
             raise ValidationError("Start time cannot be greater than or equal to end time.")
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         agent_info = f" with {self.agent.get_full_name() or self.agent.username}" if self.agent else ""

@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import Tour
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.utils import timezone
 
 
@@ -31,3 +33,11 @@ class TourCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Start time must be before end time.")
 
         return data
+    
+    def create(self, validated_data):
+        try:
+            return super().create(validated_data)
+        except DjangoValidationError as e:
+            raise DRFValidationError({
+                "non_field_errors": e.messages
+            })
