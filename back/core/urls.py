@@ -16,6 +16,9 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 
+    #Register
+    path('api/register/', RegisterView.as_view(), name='register'),
+
     # Listings
     path('api/properties/', PropertyListCreateView.as_view(), name='property-list-create'),
     path('api/properties/<int:pk>/', PropertyDetailView.as_view(), name='property-detail'),
@@ -30,6 +33,7 @@ urlpatterns = [
     # Deals
     path('api/sales/', SaleListCreateView.as_view(), name='sale-list-create'),
     path('api/sales/<int:pk>/', SaleDetailView.as_view(), name='sale-detail'),
+    
     path('api/commissions/', CommissionListView.as_view(), name='commission-list'),
     path('api/commissions/<int:pk>/', CommissionDetailView.as_view(), name='commission-detail'),
     path('api/pending-sales/', PendingSaleRequestListView.as_view(), name='pending-sale-request-list'),

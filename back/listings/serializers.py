@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import *
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.password_validation import validate_password
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
@@ -96,3 +98,34 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             PropertyImage.objects.create(property=property_obj, **image_data)
 
         return property_obj
+    
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password_confirm = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(choices=[('Buyer', 'Buyer'), ('Agent', 'Agent'), ('Owner', 'Owner')], write_only=True)
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'role')
+
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError("Passwords don't match")
+        return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('password_confirm')
+        role = validated_data.pop('role')
+        password = validated_data.pop('password')
+        user = User.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
+
+        if role:
+            try:
+                group = Group.objects.get(name=role)
+                user.groups.add(group)
+            except Group.DoesNotExist:
+                pass 
+
+        return user

@@ -1,5 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from .serializers import *
 
@@ -203,3 +205,27 @@ class PropertyImageDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = PropertyImage.objects.all()
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
+
+class RegisterView(generics.CreateAPIView):
+    serializer_class = RegisterSerializer
+    permission_classes = []
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'groups': [group.name for group in user.groups.all()]
+            },
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
