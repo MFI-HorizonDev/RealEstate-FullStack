@@ -1,17 +1,14 @@
-
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter } from "react-router";
 
 // Path
 import Login from "../login/login";
 import Notfound from "../notfound";
 import App from "../App";
-
-
-
+import Signup from "../login/signup";
 export let routes = createBrowserRouter([
   // {
   //   path: "",
-  //   element: 
+  //   element:
   //   children[
   //   {
 
@@ -20,15 +17,18 @@ export let routes = createBrowserRouter([
   // },
   {
     path: "/",
-    element: <App/>
+    element: <App />,
   },
   {
-    path: "Login",
-    element: <Login/>
+    path: "login",
+    element: <Login />,
+  },
+  {
+    element: <Signup />,
+    path: "signup",
   },
   {
     path: "*",
-    element: <Notfound/>
+    element: <Notfound />,
   },
 ]);
-

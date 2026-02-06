@@ -11,16 +11,16 @@ export default function Notfound() {
 
   return (
     <>
-      <div className="flex min-h-screen items-center justify-center font-bold gap-5 flex-col"
+      <div className="flex min-h-screen items-center justify-center font-bold gap-5 flex-col bg-blue-800 text-white"
       >
           <h1 style={{ textAlign: "center" }}>
-            <span style={{ fontSize: 40 }}>
+            <span style={{ fontSize: 80 }}>
               404
               <br />
             </span>
             Page Not Found
           </h1>
-        <Button onClick={navigation}> Go Back</Button>
+        <Button onClick={navigation} className="bg-amber-900"> Go Back</Button>
       </div>
     </>
   );
