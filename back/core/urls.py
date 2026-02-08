@@ -22,6 +22,7 @@ urlpatterns = [
     # Listings
     path('api/properties/', PropertyListCreateView.as_view(), name='property-list-create'),
     path('api/properties/<int:pk>/', PropertyDetailView.as_view(), name='property-detail'),
+    path('api/properties/<int:pk>/valuation-preview/', ValuationPreviewView.as_view(), name='property-valuation-preview'),
     path('api/properties/<int:property_id>/images/', PropertyImageListCreateView.as_view(), name='property-image-list-create'),
     path('api/properties/<int:property_id>/amenities/', AmenityListCreateView.as_view(), name='property-amenities-list-create'),
     path('api/properties/<int:property_id>/amenities/<int:pk>/', AmenityDetailView.as_view(), name='property-amenity-detail'),
