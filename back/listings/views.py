@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from .serializers import *
+from .pricing import PricingEngine
 
 # Import custom permissions from core
 from core.permissions import (
@@ -205,6 +206,23 @@ class PropertyImageDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = PropertyImage.objects.all()
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
+
+
+class ValuationPreviewView(generics.RetrieveAPIView):
+    """Preview valuation for a property. Does not save to database."""
+    queryset = Property.objects.all()
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def retrieve(self, request, *args, **kwargs):
+        property_obj = self.get_object()
+        breakdown = PricingEngine().calculate_valuation(property_obj)
+        return Response({
+            "base_price": breakdown["base_price"],
+            "amenity_impact": breakdown["amenity_impact"],
+            "estimated_total": breakdown["estimated_total"],
+        })
+
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
