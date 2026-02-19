@@ -1,0 +1,116 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+
+# Coverage
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Docs
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Pytest
+.pytest_cache/
+
+# VS Code
+.vscode/settings.json
+
+# Django media files
+/mediafiles/
+/uploads/
+
+# Local DB files
+*.db
+*.db-journal
+
+# Secrets
+secrets/
+secret.key
+secret_token.py
+config/secrets.json
+private/
+
+# Cache files
+*.cache
+*.tmp
+
+# Django static files collected
+/staticfiles/
+/static/CACHE/
+.collected-static/
+
+# Logs
+*.log
+logs/
+
+# PyCharm
+.idea/
+
+# Temporary files
+*.tmp
+*.bak
+*.old
+*.orig
+*~
+# Editor swap files
+.swp
+.swo
