@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
+import bgImage from "@/assets/bg.jpg"; 
+import { useNavigate } from "react-router";
+
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -18,8 +19,6 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-import { useNavigate } from "react-router";
 
 const userRoles = [
   { id: 1, name: "Admin" },
@@ -37,98 +36,131 @@ export default function Signup() {
 
   const navigate = useNavigate();
 
-  const HandleSignup = (e) => {
+  const handleSignup = (e) => {
     e.preventDefault();
 
     if (!email || !password || !username || !first_name || !last_name) {
       setSignup(false);
       return;
     }
+
     setSignup(true);
     setTimeout(() => {
       navigate("/login");
     }, 1000);
   };
+
   return (
-    <>
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4  bg-blue-800">
-        <Card className="justify-center w-full max-w-sm bg-white">
-          <CardHeader>
-            <CardTitle>Sign Up</CardTitle>
-            <CardDescription>Create your account</CardDescription>
-            <CardAction></CardAction>
-          </CardHeader>
-          <CardContent>
-            <form onClick={HandleSignup}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <Input
-                    id="lastname"
-                    type="text"
-                    placeholder="Last Name"
-                    onChange={(e) => setLastname(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Input
-                    id="firstname"
-                    type="text"
-                    placeholder="First Name"
-                    onChange={(e) => setFirstname(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Username"
-                    onChange={(e) => setUsername(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Select>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select your role" />
-                      <SelectContent>
-                        <SelectGroup>
-                          {userRoles.map((role) => (
-                            <SelectItem key={role.id} value={role.name}>
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </SelectTrigger>
-                  </Select>
-                </div>
-                <div>
-                  <Button variant="default" className="w-full bg-amber-900">
-                    Sign Up
-                  </Button>
-                </div>
+    <div
+      className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8"
+      style={{
+        backgroundImage: `
+          linear-gradient(
+            to bottom,
+            rgba(0, 0, 0, 0.65) 0%,
+            rgba(0, 0, 0, 0.55) 30%,
+            rgba(20, 20, 30, 0.45) 50%,
+            rgba(40, 30, 50, 0.35) 70%,
+            rgba(60, 40, 70, 0.25) 85%,
+            rgba(80, 50, 90, 0.15) 100%
+          ),
+          url(${bgImage})
+        `,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed", 
+      }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/20 pointer-events-none" />
+
+      <Card className="w-full max-w-md bg-black/65 backdrop-blur-xl border border-amber-900/30 rounded-2xl shadow-2xl shadow-black/60 hover:shadow-amber-900/20 transition-all duration-500 transform hover:scale-[1.02]">
+        <CardHeader className="space-y-1 pb-6 border-b border-amber-900/20">
+          <CardTitle className="text-3xl font-bold text-center text-white tracking-tight">
+            Create Account
+          </CardTitle>
+          <CardDescription className="text-center text-gray-400">
+            Join our exclusive community
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="pt-6">
+          <form onSubmit={handleSignup} className="space-y-5">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  id="firstname"
+                  type="text"
+                  placeholder="First Name"
+                  onChange={(e) => setFirstname(e.target.value)}
+                  className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
+                />
+                <Input
+                  id="lastname"
+                  type="text"
+                  placeholder="Last Name"
+                  onChange={(e) => setLastname(e.target.value)}
+                  className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
+                />
               </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+
+              <Input
+                id="username"
+                type="text"
+                placeholder="Username"
+                onChange={(e) => setUsername(e.target.value)}
+                className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
+              />
+
+              <Input
+                id="email"
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
+              />
+
+              <Input
+                id="password"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
+              />
+
+              <Select>
+                <SelectTrigger className="bg-black/40 border-amber-900/40 text-white data-[placeholder]:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-900 border-amber-900/40 text-white">
+                  <SelectGroup>
+                    {userRoles.map((role) => (
+                      <SelectItem
+                        key={role.id}
+                        value={role.name}
+                        className="focus:bg-amber-950 focus:text-amber-300"
+                      >
+                        {role.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-amber-700 to-amber-500 hover:from-amber-600 hover:to-amber-400 text-white font-medium py-6 rounded-xl shadow-lg shadow-amber-900/30 hover:shadow-amber-700/40 transition-all duration-300 transform hover:scale-[1.02]"
+            >
+              Create Account
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+
+    </div>
   );
 }
