@@ -51,7 +51,9 @@ class Property(models.Model):
         return 0
 
     def amenity_price_total(self):
-
+        if not self.pk:
+            return 0
+            
         total = 0
         for amenity in self.amenities.all():
             if amenity.amenity_type == "Basic" and amenity.price > 100000:
