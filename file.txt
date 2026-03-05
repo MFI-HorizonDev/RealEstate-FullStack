@@ -1,0 +1,84 @@
+.
+├── Front/
+│   ├── Src/
+│   │   └── Asset/
+│   │       └── react
+│   ├── Components/
+│   │   ├── ui         
+│   │   ├── shared      
+│   │   └── button
+│   ├── Features/
+│   │   ├── listing     
+│   │   ├── pricing     
+│   │   ├── tours       
+│   │   └── auth        
+│   ├── hooks          
+│   ├── layouts       
+│   ├── pages/         
+│   │   ├── Home        
+│   │   ├── about us
+│   │   ├── log in
+│   │   ├── register
+│   │   ├── profile
+│   │   ├── owner/     
+│   │   │   ├── dashboard
+│   │   │   ├── properties/
+│   │   │   │   ├── all-properties
+│   │   │   │   ├── add-property
+│   │   │   │   ├── edit-property
+│   │   │   │   └── property-details/
+│   │   │   │       ├── availability
+│   │   │   │       └── pricing
+│   │   │   ├── Payments
+│   │   │   ├── Appointment schedules(bookings)
+│   │   │   └── Listing/
+│   │   │       ├── publish
+│   │   │       └── unpublish
+│   │   ├── Agent/
+│   │   │   ├── dashboard
+│   │   │   ├── properties
+│   │   │   ├── tour and schedule visit
+│   │   │   ├── Listing /
+│   │   │   │   ├── villa
+│   │   │   │   ├── condo
+│   │   │   │   ├── apartment
+│   │   │   │   └── rent
+│   │   │   └── appointment/
+│   │   │       └── tour and schedule visit
+│   │   └── customer/
+│   │       ├── dashboard
+│   │       ├── Listing /
+│   │       │   ├── villa
+│   │       │   ├── condo
+│   │       │   └── apartment
+│   │       ├── booking/
+│   │       │   └── tour and schedule visit
+│   │       ├── payments
+│   │       ├── properties
+│   │       ├── inquiries/
+│   │       │   ├── contact
+│   │       │   └── email
+│   │       └── list of agents/
+│   │           ├── profile
+│   │           ├── emails
+│   │           └── contacts
+│   ├── Routes/
+│   ├── Lib/
+│   │   ├── utils
+│   │   ├── app
+│   │   ├── index
+│   │   └── main
+│   └── API/
+│       └── Authentication/
+│           ├── Login.jsx
+│           ├── Register.jsx
+│           └── permissions.js
+├── .gitignore
+├── .gitkeep
+├── {}components.json
+├── eslint.config.js
+├── index.html
+├── jsconfig.json
+├── package.json
+├── README.md
+└── vite.config.js
