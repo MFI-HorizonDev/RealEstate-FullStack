@@ -3,7 +3,6 @@ from django.core.validators import MinValueValidator
 from listings.models import Property
 from django.contrib.auth.models import User
 
-
 class Sale(models.Model):
     APPROVAL_STATUS_CHOICES = [
         ('PENDING_REVIEW', 'Pending Review'),

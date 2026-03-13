@@ -3,6 +3,7 @@ from .models import Sale, Commission, PendingSaleRequest
 from listings.models import Property
 from listings.serializers import PropertySerializer
 
+# Factory Data 
 
 class CommissionSerializer(serializers.ModelSerializer):
     agent_name = serializers.CharField(source='agent.username', read_only=True)
