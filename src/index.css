@@ -121,3 +121,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+
+/* Custom utils*/
+/* global.css or styles.css */
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari, and Opera */
+  .hide-horizontal-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge, and Firefox */
+  .hide-horizontal-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
