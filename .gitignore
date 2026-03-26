@@ -1,3 +1,36 @@
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Editor / IDE
+.vscode/
+!.vscode/extensions.json
+.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
 # Python
 __pycache__/
 *.py[cod]
@@ -6,7 +39,6 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -20,29 +52,15 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-*.manifest
-*.spec
 
-# Virtual Environment
+# Virtual Environments
 venv/
 env/
 ENV/
 env.bak/
 venv.bak/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
 # Django
-*.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -51,34 +69,27 @@ staticfiles/
 
 # Environment variables
 .env
-.env.local
-.env.production
-.env.staging
-.env.development
+.env.*
+!.env.example
 
-# Coverage
+# Coverage / Testing
 .coverage
 htmlcov/
 .tox/
 .nox/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints
 
 # Docs
 docs/_build/
 
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Pytest
-.pytest_cache/
-
-# VS Code
-.vscode/settings.json
-
-# Django media files
+# Django uploads
 /mediafiles/
 /uploads/
 
-# Local DB files
+# Databases
 *.db
 *.db-journal
 
@@ -89,53 +100,13 @@ secret_token.py
 config/secrets.json
 private/
 
-# Cache files
+# Cache / temp
 *.cache
-*.tmp
-
-# Django static files collected
-/staticfiles/
-/static/CACHE/
-.collected-static/
-
-# Logs
-*.log
-logs/
-
-# PyCharm
-.idea/
-
-# Temporary files
 *.tmp
 *.bak
 *.old
 *.orig
-*~
-# Editor swap files
-.swp
-.swo
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# Static cache
+/static/CACHE/
+.collected-static/
