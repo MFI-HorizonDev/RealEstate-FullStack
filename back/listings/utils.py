@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.db.models import Avg, F, ExpressionWrapper, DecimalField
 from django.utils import timezone
 from datetime import timedelta
@@ -23,3 +24,23 @@ def get_market_buffer(municipality):
     ).aggregate(
         avg_price_per_sqm=Avg("price_per_sqm")
     )["avg_price_per_sqm"]
+
+def get_cached_market_buffer(municipality):
+    """
+    Standard getter for the Pricing Engine.
+    Tries Redis first. If empty (e.g., server restart), triggers a live calculation.
+    """
+    cache_key = f"market_buffer_{municipality.id}"
+    cached_value = cache.get(cache_key)
+    
+    if cached_value is not None:
+        return cached_value
+        
+    # Fallback if cache is empty
+    live_calc = get_market_buffer(municipality)
+    if live_calc is None:
+        return municipality.price_per_sqm
+        
+    # Set cache temporarily until Celery takes over
+    cache.set(cache_key, live_calc, timeout=60 * 60)
+    return live_calc
