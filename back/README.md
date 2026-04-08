@@ -4,6 +4,29 @@ Django REST API backend with PostgreSQL, Redis, and Celery.
 
 <!-- MAKE SURE YOU RUN THE DOCKER DEKSTOP FIRST -->
 
+
+How to create a fake user
+
+<python3 manage.py seed_users --number {number of users}>
+
+
+NOTE: if you encounter deprecation problem that says -- return timezone.make_aware(value, timezone.get_current_timezone(), is_dst=False)--
+
+1: Go to venv-lib-python-site_package
+
+2:Under django_seeed locate guessers.py 
+
+
+3: Locate this return timezone.make_aware(value, timezone.get_current_timezone(), is_dst=False)
+
+4: Remove the ", is_dst=False"
+
+5: Run migrations
+
+
+
+
+
 ## How to Run
 
 ### Step 1: Start Docker Desktop
@@ -70,6 +93,9 @@ Enter username, email, and password when prompted.
 - **Admin:** http://localhost:8000/admin
 
 ---
+
+
+<python manage.py seed_users --number 50>
 
 ## Common Commands
 
