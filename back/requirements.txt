@@ -9,6 +9,7 @@ click-repl==0.3.0
 Django==5.2.7
 django-cors-headers==4.9.0
 django-extensions==4.1
+django-redis==6.0.0
 django-seed==0.3.1
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
