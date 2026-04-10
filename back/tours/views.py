@@ -7,6 +7,9 @@ from .serializers import TourSerializer, TourCreateSerializer
 
 class IsOwnerOrAgentOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
+        if request.user and request.user.is_authenticated and request.user.is_superuser:
+            return True
+
         if request.method in permissions.SAFE_METHODS:
             return request.user and request.user.is_authenticated
 
@@ -14,13 +17,16 @@ class IsOwnerOrAgentOrReadOnly(permissions.BasePermission):
             return (
                 obj.property.owner == request.user or
                 obj.property.agent == request.user or
-                request.user.is_staff
+                request.user.is_superuser
             )
         return False
 
 
 class IsTourCreatorOrPropertyAgent(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
+        if request.user and request.user.is_authenticated and request.user.is_superuser:
+            return True
+
         if request.method in permissions.SAFE_METHODS:
             return True
 
@@ -28,7 +34,7 @@ class IsTourCreatorOrPropertyAgent(permissions.BasePermission):
             obj.agent == request.user or
             (hasattr(obj, 'property') and obj.property.agent == request.user) or
             (hasattr(obj, 'property') and obj.property.owner == request.user) or
-            request.user.is_staff
+            request.user.is_superuser
         )
 
 class TourListView(generics.ListAPIView):
@@ -56,7 +62,7 @@ class TourCreateView(generics.CreateAPIView):
         if tour_property and self.request.user not in [
             tour_property.owner,
             tour_property.agent
-        ] and not self.request.user.is_staff:
+        ] and not self.request.user.is_superuser:
             raise PermissionDenied(
                 "Only property owner or agent can create tours."
             )

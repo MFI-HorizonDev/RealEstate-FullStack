@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.utils import timezone
 from datetime import timedelta
 from django_seed import Seed
@@ -24,20 +25,29 @@ class Command (BaseCommand):
         number = options['number']
         seeder = Seed.seeder()
 
+        # Ensure expected role groups exist before assigning users to them.
+        for group_name in ['Admin', 'Agent', 'Owner', 'Buyer']:
+            Group.objects.get_or_create(name=group_name)
+
         # ── 1. Users ──────────────────────────────────────────────────────────
         # Create admin superuser first
         admin_username = 'admin'
         admin_email = 'admin@realestate.com'
         if not User.objects.filter(username=admin_username).exists():
-            User.objects.create_superuser(
+            admin_user = User.objects.create_superuser(
                 username=admin_username,
                 email=admin_email,
                 password='admin123',
                 first_name='Admin',
                 last_name='User'
             )
+            admin_group = Group.objects.get(name='Admin')
+            admin_user.groups.add(admin_group)
             self.stdout.write(self.style.SUCCESS(f'Created superuser: {admin_username} (password: admin123)'))
         else:
+            admin_user = User.objects.get(username=admin_username)
+            admin_group = Group.objects.get(name='Admin')
+            admin_user.groups.add(admin_group)
             self.stdout.write(self.style.WARNING(f'Superuser {admin_username} already exists, skipping.'))
 
         seeder.add_entity (User, number, {
