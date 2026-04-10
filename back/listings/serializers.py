@@ -57,7 +57,7 @@ class PropertyImageCreateSerializer(serializers.ModelSerializer):
 class PropertySerializer(serializers.ModelSerializer):
     amenities = AmenitySerializer(many=True, read_only=True)
     images = PropertyImageSerializer(many=True, read_only=True)
-    property_tours = serializers.SerializerMethodField() 
+    property_tours = serializers.SerializerMethodField()
     owner = serializers.StringRelatedField(read_only=True)
     agent = serializers.StringRelatedField(read_only=True)
     property_municipality = MunicipalitySerializer(read_only=True)
@@ -65,10 +65,11 @@ class PropertySerializer(serializers.ModelSerializer):
     class Meta:
         model = Property
         fields = '__all__'
+        read_only_fields = ['property_tours']
 
     def get_property_tours(self, obj):
         from tours.serializers import TourSerializer
-        tours = obj.tours.all() 
+        tours = obj.tours.all()
         return TourSerializer(tours, many=True, context=self.context).data
 
 
@@ -78,7 +79,7 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Property
-        exclude = ['owner', 'property_tours']
+        exclude = ['owner']
 
     def validate_images(self, value):
         if len(value) > 20:

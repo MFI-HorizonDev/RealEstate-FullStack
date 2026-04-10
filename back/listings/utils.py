@@ -28,19 +28,27 @@ def get_market_buffer(municipality):
 def get_cached_market_buffer(municipality):
     """
     Standard getter for the Pricing Engine.
-    Tries Redis first. If empty (e.g., server restart), triggers a live calculation.
+    Tries Redis first. If empty or unavailable, falls back to a live calculation.
     """
     cache_key = f"market_buffer_{municipality.id}"
-    cached_value = cache.get(cache_key)
-    
+
+    try:
+        cached_value = cache.get(cache_key)
+    except Exception:
+        cached_value = None
+
     if cached_value is not None:
         return cached_value
-        
-    # Fallback if cache is empty
+
+    # Fallback if cache is empty or Redis is down
     live_calc = get_market_buffer(municipality)
     if live_calc is None:
         return municipality.price_per_sqm
-        
-    # Set cache temporarily until Celery takes over
-    cache.set(cache_key, live_calc, timeout=60 * 60)
+
+    # Set cache temporarily until Celery takes over (skip if Redis is down)
+    try:
+        cache.set(cache_key, live_calc, timeout=60 * 60)
+    except Exception:
+        pass
+
     return live_calc

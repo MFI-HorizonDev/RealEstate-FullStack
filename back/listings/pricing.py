@@ -39,7 +39,7 @@ class PricingEngine:
                 "estimated_total": 0,
             }
 
-        market_rate = get_market_buffer(municipality)
+        market_rate = get_cached_market_buffer(municipality)
         if market_rate is None:
             market_rate = municipality.price_per_sqm
         market_rate = Decimal(str(market_rate))
