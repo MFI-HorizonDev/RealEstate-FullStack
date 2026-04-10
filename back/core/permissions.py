@@ -1,24 +1,45 @@
 from rest_framework import permissions
 
-class IsAdminGroup(permissions.BasePermission):
+class IsSuperUserOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.is_superuser
+
+class IsAdminGroupOnly(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.groups.filter(name='Admin').exists()
 
+class IsAdminGroup(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and (
+            request.user.is_superuser or
+            request.user.groups.filter(name='Admin').exists()
+        )
+
 class IsAgentGroup(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.groups.filter(name='Agent').exists()
+        return request.user.is_authenticated and (
+            request.user.is_superuser or
+            request.user.groups.filter(name='Agent').exists()
+        )
 
 class IsOwnerGroup(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.groups.filter(name='Owner').exists()
+        return request.user.is_authenticated and (
+            request.user.is_superuser or
+            request.user.groups.filter(name='Owner').exists()
+        )
 
 class IsBuyerGroup(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.groups.filter(name='Buyer').exists()
+        return request.user.is_authenticated and (
+            request.user.is_superuser or
+            request.user.groups.filter(name='Buyer').exists()
+        )
 
 class IsAdminOrAgent(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
+            request.user.is_superuser or
             request.user.groups.filter(name='Admin').exists() or
             request.user.groups.filter(name='Agent').exists()
         )
@@ -26,6 +47,7 @@ class IsAdminOrAgent(permissions.BasePermission):
 class IsOwnerOrBuyerGroup(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
+            request.user.is_superuser or
             request.user.groups.filter(name='Owner').exists() or
             request.user.groups.filter(name='Buyer').exists()
         )
@@ -33,6 +55,7 @@ class IsOwnerOrBuyerGroup(permissions.BasePermission):
 class IsAdminOrAgentOrOwnerGroup(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
+            request.user.is_superuser or
             request.user.groups.filter(name='Admin').exists() or
             request.user.groups.filter(name='Agent').exists() or
             request.user.groups.filter(name='Owner').exists()
@@ -40,10 +63,13 @@ class IsAdminOrAgentOrOwnerGroup(permissions.BasePermission):
 
 class IsOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
-        return hasattr(obj, 'owner') and obj.owner == request.user
+        return request.user.is_superuser or (hasattr(obj, 'owner') and obj.owner == request.user)
 
 class IsOwnerOrAgentOrReadOnly(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+
         if request.method in permissions.SAFE_METHODS:
             return request.user.is_authenticated
 

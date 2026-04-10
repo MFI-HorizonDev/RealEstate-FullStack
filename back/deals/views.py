@@ -9,10 +9,13 @@ from .serializers import (
     CommissionSerializer, PendingSaleRequestSerializer
 )
 from listings.models import Property
-
+from core.permissions import IsAdminGroupOnly
 
 class IsPropertyOwnerOrAgent(permissions.BasePermission):
     def has_permission(self, request, view):
+        if request.user and request.user.is_authenticated and request.user.is_superuser:
+            return True
+
         if request.method == 'POST':
             property_id = request.data.get('property_id')
             if property_id:
@@ -25,7 +28,7 @@ class IsPropertyOwnerOrAgent(permissions.BasePermission):
         return request.user and request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_staff:
+        if request.user.is_superuser:
             return True
         if hasattr(obj, 'property'):
             return (request.user == obj.property.owner or
@@ -40,7 +43,7 @@ class SaleListView(generics.ListAPIView):
     permission_classes = [IsPropertyOwnerOrAgent]
 
     def get_queryset(self):
-        if self.request.user.is_staff:
+        if self.request.user.is_superuser:
             return Sale.objects.all()
         from django.db.models import Q
         return Sale.objects.filter(
@@ -128,7 +131,7 @@ class CommissionListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        if self.request.user.is_staff:
+        if self.request.user.is_superuser:
             return Commission.objects.all()
         return Commission.objects.filter(agent=self.request.user)
 
@@ -158,7 +161,7 @@ class CommissionDeleteView(generics.DestroyAPIView):
 class PendingSaleRequestListView(generics.ListAPIView):
     serializer_class = PendingSaleRequestSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdminGroupOnly]
 
     def get_queryset(self):
         return PendingSaleRequest.objects.filter(status='PENDING')
@@ -168,14 +171,14 @@ class PendingSaleRequestRetrieveView(generics.RetrieveAPIView):
     queryset = PendingSaleRequest.objects.all()
     serializer_class = PendingSaleRequestSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdminGroupOnly]
 
 
 class PendingSaleRequestUpdateView(generics.UpdateAPIView):
     queryset = PendingSaleRequest.objects.all()
     serializer_class = PendingSaleRequestSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdminGroupOnly]
 
     def perform_update(self, serializer):
         previous_status = serializer.instance.status
@@ -216,4 +219,4 @@ class AdminSaleApprovalView(generics.UpdateAPIView):
     queryset = Sale.objects.filter(approval_status='PENDING_REVIEW')
     serializer_class = SaleSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAdminGroupOnly]
