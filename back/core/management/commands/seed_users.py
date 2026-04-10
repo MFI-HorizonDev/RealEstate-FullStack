@@ -25,6 +25,21 @@ class Command (BaseCommand):
         seeder = Seed.seeder()
 
         # ── 1. Users ──────────────────────────────────────────────────────────
+        # Create admin superuser first
+        admin_username = 'admin'
+        admin_email = 'admin@realestate.com'
+        if not User.objects.filter(username=admin_username).exists():
+            User.objects.create_superuser(
+                username=admin_username,
+                email=admin_email,
+                password='admin123',
+                first_name='Admin',
+                last_name='User'
+            )
+            self.stdout.write(self.style.SUCCESS(f'Created superuser: {admin_username} (password: admin123)'))
+        else:
+            self.stdout.write(self.style.WARNING(f'Superuser {admin_username} already exists, skipping.'))
+
         seeder.add_entity (User, number, {
             'username': lambda x: seeder.faker.unique.user_name(),
             'email': lambda x: seeder.faker.unique.email(),
@@ -137,7 +152,6 @@ class Command (BaseCommand):
                 tour.save()
                 mark_slot(f'prop_{prop.id}', start, end)
                 mark_slot(f'agent_{agent.id}', start, end)
-                prop.property_tours.add(tour)
                 tours.append(tour)
             except Exception:
                 continue
@@ -145,11 +159,15 @@ class Command (BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Successfully created {len(tours)} tours'))
 
         # ── 6. Sales ──────────────────────────────────────────────────────────
+        # Get properties that already have sales to avoid OneToOne constraint errors
+        existing_sale_property_ids = set(Sale.objects.values_list('property_id', flat=True))
+        available_properties = [p for p in properties if p.id not in existing_sale_property_ids]
+        
         sold_ids = set()
         sales = []
-        sale_count = min(number, len(properties))
+        sale_count = min(number, len(available_properties))
 
-        for prop in random.sample(properties, k=sale_count):
+        for prop in random.sample(available_properties, k=sale_count):
             sale = Sale.objects.create(
                 property=prop,
                 date_sold=seeder.faker.date_between(start_date='-1y', end_date='today'),

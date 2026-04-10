@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework.exceptions import PermissionDenied
-from django.db import transaction
+from rest_framework.exceptions import ValidationError
+from django.db import transaction, IntegrityError
 from decimal import Decimal
 from .models import Sale, Commission, PendingSaleRequest
 from .serializers import (
@@ -80,7 +80,13 @@ class SaleCreateView(generics.CreateAPIView):
                 property_obj.status = 'UNDER_REVIEW'
                 property_obj.save()
             else:
-                sale_instance = serializer.save()
+                try:
+                    sale_instance = serializer.save()
+                except IntegrityError:
+                    raise ValidationError({
+                        'property_id': 'A sale record already exists for this property.'
+                    })
+
                 property_obj.status = 'SOLD'
                 property_obj.save()
 
@@ -172,33 +178,38 @@ class PendingSaleRequestUpdateView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAdminUser]
 
     def perform_update(self, serializer):
+        previous_status = serializer.instance.status
         instance = serializer.save()
 
         property_obj = instance.property
 
-        if instance.status == 'APPROVED':
-            sale = Sale.objects.create(
+        if instance.status == 'APPROVED' and previous_status != 'APPROVED':
+            sale, _ = Sale.objects.get_or_create(
                 property=property_obj,
-                date_sold=instance.created_at.date(),
-                final_price=instance.final_price,
-                buyer=instance.proposed_buyer,
-                approval_status='APPROVED'
+                defaults={
+                    'date_sold': instance.created_at.date(),
+                    'final_price': instance.final_price,
+                    'buyer': instance.proposed_buyer,
+                    'approval_status': 'APPROVED',
+                }
             )
             property_obj.status = 'SOLD'
-            property_obj.save()
+            property_obj.save(update_fields=['status'])
 
             if property_obj.agent:
                 commission_rate = Decimal('5.00')
                 commission_amount = (sale.final_price * commission_rate) / 100
-                Commission.objects.create(
+                Commission.objects.get_or_create(
                     sale=sale,
                     agent=property_obj.agent,
-                    commission_rate=commission_rate,
-                    amount_calculated=commission_amount
+                    defaults={
+                        'commission_rate': commission_rate,
+                        'amount_calculated': commission_amount,
+                    }
                 )
         elif instance.status == 'REJECTED':
             property_obj.status = 'ACTIVE'
-            property_obj.save()
+            property_obj.save(update_fields=['status'])
 
 
 class AdminSaleApprovalView(generics.UpdateAPIView):

@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.contrib.auth.models import User
-from tours.models import Tour
 
 class Municipality(models.Model):
     municipality_name = models.CharField(max_length=100)
@@ -37,7 +36,6 @@ class Property(models.Model):
     price = models.IntegerField(validators=[MinValueValidator(0)], blank=True, null=True)
     type = models.CharField(max_length=12, choices=LISTING_TYPES)
     is_available_for_tour = models.BooleanField(default=False)
-    property_tours = models.ManyToManyField(Tour,blank=True,related_name="properties_on_tour")
     status = models.CharField(max_length=15, choices=STATUS_TYPES, default="ACTIVE")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

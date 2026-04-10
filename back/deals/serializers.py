@@ -5,6 +5,17 @@ from listings.serializers import PropertySerializer
 
 # Factory Data 
 
+
+def _validate_unique_sale_property(property_obj, current_sale=None):
+    sale_qs = Sale.objects.filter(property=property_obj)
+    if current_sale:
+        sale_qs = sale_qs.exclude(pk=current_sale.pk)
+
+    if sale_qs.exists():
+        raise serializers.ValidationError({
+            'property_id': 'A sale record already exists for this property.'
+        })
+
 class CommissionSerializer(serializers.ModelSerializer):
     agent_name = serializers.CharField(source='agent.username', read_only=True)
 
@@ -22,16 +33,11 @@ class SaleSerializer(serializers.ModelSerializer):
         model = Sale
         fields = '__all__'
 
-    def to_internal_value(self, data):
-        # Handle the property_id conversion properly before validation
-        property_id = data.get('property_id')
-        if property_id:
-            try:
-                property_obj = Property.objects.get(pk=property_id)
-                data['property_id'] = property_obj
-            except Property.DoesNotExist:
-                pass  # Let the validation handle the error
-        return super().to_internal_value(data)
+    def validate(self, attrs):
+        property_obj = attrs.get('property_id')
+        if property_obj:
+            _validate_unique_sale_property(property_obj, current_sale=self.instance)
+        return attrs
 
     def create(self, validated_data):
         property_id = validated_data.pop('property_id', None)
@@ -54,6 +60,9 @@ class SaleCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         # If final_price is not provided, automatically set it to the property's total_price
         property_obj = attrs.get('property_id')
+        if property_obj:
+            _validate_unique_sale_property(property_obj, current_sale=self.instance)
+
         if property_obj and ('final_price' not in attrs or not attrs['final_price'] or attrs['final_price'] == 0):
             attrs['final_price'] = property_obj.total_price()
         return attrs
@@ -74,4 +83,4 @@ class PendingSaleRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = PendingSaleRequest
         fields = '__all__'
-        read_only_fields = ('status', 'created_at', 'updated_at')
+        read_only_fields = ('created_at', 'updated_at')
