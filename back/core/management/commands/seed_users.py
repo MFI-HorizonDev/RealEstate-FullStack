@@ -120,51 +120,38 @@ class Command (BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f'Successfully created {amenity_count} amenities'))
 
-        # ── 5. Tours (overlap-safe) ───────────────────────────────────────────
-        statuses = ['Scheduled', 'Completed', 'Cancelled']
-        used_slots = {}
+        # ── 5. Tours (Smart Booking model) ────────────────────────────────────
+        statuses = [
+            Tour.STATUS_QUEUED,
+            Tour.STATUS_SCHEDULED,
+            Tour.STATUS_COMPLETED,
+            Tour.STATUS_REJECTED,
+        ]
         base_time = timezone.now().replace(minute=0, second=0, microsecond=0) + timedelta(days=1)
         tours = []
-        attempts = 0
+        scheduled_by_agent = {}
 
-        def slot_free(key, start, end):
-            for (s, e) in used_slots.get(key, []):
-                if not (end <= s or start >= e):
-                    return False
-            return True
-
-        def mark_slot(key, start, end):
-            used_slots.setdefault(key, []).append((start, end))
-
-        while len(tours) < number and attempts < number * 10:
-            attempts += 1
+        for i in range(number):
             prop = random.choice(properties)
-            agent = random.choice(users)
+            agent = prop.agent or random.choice(users)
             buyer = random.choice(users)
-            start = base_time + timedelta(hours=random.randint(0, 200))
-            end = start + timedelta(hours=random.randint(1, 3))
+            status = random.choice(statuses)
 
-            if not slot_free(f'prop_{prop.id}', start, end):
-                continue
-            if not slot_free(f'agent_{agent.id}', start, end):
-                continue
+            if status == Tour.STATUS_SCHEDULED:
+                slot_index = len(scheduled_by_agent.get(agent.id, []))
+                tour_dt = base_time + timedelta(hours=slot_index * 3)
+                scheduled_by_agent.setdefault(agent.id, []).append(tour_dt)
+            else:
+                tour_dt = base_time + timedelta(hours=random.randint(0, 200))
 
-            try:
-                tour = Tour(
-                    property=prop,
-                    agent=agent,
-                    buyer=buyer,
-                    start_time=start,
-                    end_time=end,
-                    status=random.choice(statuses),
-                )
-                tour.full_clean()
-                tour.save()
-                mark_slot(f'prop_{prop.id}', start, end)
-                mark_slot(f'agent_{agent.id}', start, end)
-                tours.append(tour)
-            except Exception:
-                continue
+            tour = Tour.objects.create(
+                property=prop,
+                agent=agent,
+                buyer=buyer,
+                tour_datetime=tour_dt,
+                status=status,
+            )
+            tours.append(tour)
 
         self.stdout.write(self.style.SUCCESS(f'Successfully created {len(tours)} tours'))
 

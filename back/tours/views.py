@@ -1,90 +1,96 @@
 from rest_framework import generics, permissions
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
+from core.permissions import IsBuyerGroup
 from .models import Tour
-from .serializers import TourSerializer, TourCreateSerializer
+from .serializers import TourAgentActionSerializer, TourSerializer
 
 
-class IsOwnerOrAgentOrReadOnly(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.user and request.user.is_authenticated and request.user.is_superuser:
-            return True
+class TourListCreateView(generics.ListCreateAPIView):
+    serializer_class = TourSerializer
+    authentication_classes = [JWTAuthentication]
 
-        if request.method in permissions.SAFE_METHODS:
-            return request.user and request.user.is_authenticated
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [permissions.IsAuthenticated(), IsBuyerGroup()]
+        return [permissions.IsAuthenticated()]
 
-        if hasattr(obj, 'property'):
-            return (
-                obj.property.owner == request.user or
-                obj.property.agent == request.user or
-                request.user.is_superuser
-            )
-        return False
+    def get_queryset(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return Tour.objects.none()
 
+        if user.is_superuser or user.groups.filter(name="Admin").exists():
+            return Tour.objects.all()
 
-class IsTourCreatorOrPropertyAgent(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.user and request.user.is_authenticated and request.user.is_superuser:
-            return True
+        if user.groups.filter(name="Agent").exists():
+            return Tour.objects.filter(agent=user)
 
-        if request.method in permissions.SAFE_METHODS:
-            return True
+        if user.groups.filter(name="Buyer").exists():
+            return Tour.objects.filter(buyer=user)
 
-        return (
-            obj.agent == request.user or
-            (hasattr(obj, 'property') and obj.property.agent == request.user) or
-            (hasattr(obj, 'property') and obj.property.owner == request.user) or
-            request.user.is_superuser
+        return Tour.objects.none()
+
+    def perform_create(self, serializer):
+        prop = serializer.validated_data.get("property")
+        if prop and not prop.is_available_for_tour:
+            raise PermissionDenied("This property is not available for tours.")
+
+        agent = prop.agent if prop else None
+        serializer.save(
+            buyer=self.request.user,
+            agent=agent,
+            status=Tour.STATUS_QUEUED,
         )
 
-class TourListView(generics.ListAPIView):
+
+class TourRetrieveView(generics.RetrieveAPIView):
     serializer_class = TourSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Tour.objects.all()
+        user = self.request.user
+        if not user.is_authenticated:
+            return Tour.objects.none()
+        if user.is_superuser or user.groups.filter(name="Admin").exists():
+            return Tour.objects.all()
+        if user.groups.filter(name="Agent").exists():
+            return Tour.objects.filter(agent=user)
+        if user.groups.filter(name="Buyer").exists():
+            return Tour.objects.filter(buyer=user)
+        return Tour.objects.none()
 
 
-class TourCreateView(generics.CreateAPIView):
-    serializer_class = TourCreateSerializer
+class IsAgentOrAdminForTourAction(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return bool(
+            request.user.is_superuser
+            or request.user.groups.filter(name__in=["Agent", "Admin"]).exists()
+        )
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser or request.user.groups.filter(name="Admin").exists():
+            return True
+        return obj.agent_id == request.user.id
+
+
+class TourAgentActionView(generics.UpdateAPIView):
+    queryset = Tour.objects.filter(status=Tour.STATUS_QUEUED)
+    serializer_class = TourAgentActionSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAgentOrAdminForTourAction]
+    http_method_names = ["patch", "head", "options"]
 
-    def perform_create(self, serializer):
-        tour_property = serializer.validated_data.get('property')
-
-        if tour_property and not tour_property.is_available_for_tour:
-            raise PermissionDenied(
-                "This property is not available for tours."
-            )
-
-        if tour_property and self.request.user not in [
-            tour_property.owner,
-            tour_property.agent
-        ] and not self.request.user.is_superuser:
-            raise PermissionDenied(
-                "Only property owner or agent can create tours."
-            )
-
-        serializer.save(agent=self.request.user)
-
-
-class TourRetrieveView(generics.RetrieveAPIView):
-    queryset = Tour.objects.all()
-    serializer_class = TourSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
-
-class TourUpdateView(generics.UpdateAPIView):
-    queryset = Tour.objects.all()
-    serializer_class = TourSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsTourCreatorOrPropertyAgent]
-
-
-class TourDeleteView(generics.DestroyAPIView):
-    queryset = Tour.objects.all()
-    serializer_class = TourSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    def get_queryset(self):
+        user = self.request.user
+        qs = super().get_queryset()
+        if user.is_superuser or user.groups.filter(name="Admin").exists():
+            return qs
+        if user.groups.filter(name="Agent").exists():
+            return qs.filter(agent=user)
+        return Tour.objects.none()
