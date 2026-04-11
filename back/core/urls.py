@@ -76,12 +76,14 @@ urlpatterns = [
     # Valuation preview for a property
     path('api/properties/<int:pk>/valuation-preview/', ValuationPreviewView.as_view(), name='property-valuation-preview'),
 
-    #Tours
-    path("api/tours/",TourListView.as_view(),name="tour-list"),
-    path("api/tours/create/",TourCreateView.as_view(),name="tour-create"),
-    path("api/tours/<int:pk>/",TourRetrieveView.as_view(),name="tour-retrieve"),
-    path("api/tours/<int:pk>/update/",TourUpdateView.as_view(),name="tour-update"),
-    path("api/tours/<int:pk>/delete/",TourDeleteView.as_view(),name="tour-delete"),
+    # Tours
+    path("api/tours/", TourListCreateView.as_view(), name="tour-list-create"),
+    path("api/tours/<int:pk>/", TourRetrieveView.as_view(), name="tour-retrieve"),
+    path(
+        "api/tours/<int:pk>/agent-action/",
+        TourAgentActionView.as_view(),
+        name="tour-agent-action",
+    ),
 
     #Sales
     path('api/sales/', SaleListView.as_view(), name='sale-list'),
