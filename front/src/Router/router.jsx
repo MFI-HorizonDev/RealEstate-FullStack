@@ -5,6 +5,7 @@ import Login from "../login/login";
 import Notfound from "../notfound";
 import App from "../App";
 import Signup from "../login/signup";
+import AdminAuditDashboard from "../pages/Admin/AdminAuditDashboard";
 export let routes = createBrowserRouter([
   // {
   //   path: "",
@@ -26,6 +27,10 @@ export let routes = createBrowserRouter([
   {
     element: <Signup />,
     path: "signup",
+  },
+  {
+    path: "admin/audit-dashboard",
+    element: <AdminAuditDashboard />,
   },
   {
     path: "*",

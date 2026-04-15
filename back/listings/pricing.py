@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from .utils import get_market_buffer
+from .utils import get_cached_market_buffer
 
 
 class PricingEngine:
@@ -21,7 +21,7 @@ class PricingEngine:
         return total
 
     def _get_subdivision_multiplier(self, property_obj):
-        # if you add a subdivision_multiplier field to Property later, it will be used
+        # if  a subdivision_multiplier field is added to Property later, it will be used
         return getattr(property_obj, "subdivision_multiplier", Decimal("1.0"))
 
     def calculate_valuation(self, property_obj):
@@ -39,7 +39,7 @@ class PricingEngine:
                 "estimated_total": 0,
             }
 
-        market_rate = get_market_buffer(municipality)
+        market_rate = get_cached_market_buffer(municipality)
         if market_rate is None:
             market_rate = municipality.price_per_sqm
         market_rate = Decimal(str(market_rate))
