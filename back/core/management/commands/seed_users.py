@@ -29,7 +29,7 @@ class Command(BaseCommand):
         # =====================================================================
         self.stdout.write(self.style.WARNING('STEP 1: Creating groups...'))
 
-        group_names = ['Admin', 'Agent', 'Owner', 'Buyer']
+        group_names = ['SuperAdmin', 'Admin', 'Agent', 'Owner', 'Buyer']
         groups = {}
 
         for group_name in group_names:
@@ -63,8 +63,10 @@ class Command(BaseCommand):
             superuser.is_staff = True
             superuser.is_superuser = True
             superuser.save()
+            superuser.groups.add(groups['SuperAdmin'])
             self.stdout.write(self.style.SUCCESS(f'  ✓ Created superuser: {superuser_username} (password: {superuser_password})'))
         else:
+            superuser.groups.add(groups['SuperAdmin'])
             self.stdout.write(self.style.SUCCESS(f'  • Superuser already exists: {superuser_username}'))
 
         self.stdout.write(self.style.WARNING('\nSTEP 3: Creating users with group assignments...'))
@@ -273,6 +275,11 @@ class Command(BaseCommand):
         sale_ct = ContentType.objects.get_for_model(Sale)
         commission_ct = ContentType.objects.get_for_model(Commission)
         pendingsale_ct = ContentType.objects.get_for_model(PendingSaleRequest)
+
+        # SuperAdmin permissions — can do absolutely everything
+        superadmin_permissions = Permission.objects.all()
+        groups['SuperAdmin'].permissions.set(superadmin_permissions)
+        self.stdout.write('  ✓ SuperAdmin group: Full permissions on ALL models and actions')
 
         # Admin permissions — can do everything
         admin_permissions = Permission.objects.filter(
