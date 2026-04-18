@@ -1,8 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useCookies } from "react-cookie";
 import { BASE_URL } from "./config";
 
-async function fetchProperties(token) {
-  const response = await fetch(`${BASE_URL}/properties/`, {
+async function fetchProperties({ page, token }) {
+  const response = await fetch(`${BASE_URL}/properties/?page=${page}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -18,12 +19,15 @@ async function fetchProperties(token) {
   return response.json();
 }
 
-export function useProperties({ token, enabled = true }) {
+export function useProperties(page) {
+  const [cookies] = useCookies(["access", "access_token", "token"]);
+  const token = cookies.access || cookies.access_token || cookies.token;
+
   return useQuery({
-    queryKey: ["properties"],
-    queryFn: () => fetchProperties(token),
-    enabled,
-    staleTime: 1000 * 60 * 2,
+    queryKey: ["properties", page],
+    queryFn: () => fetchProperties({ page, token }),
+    placeholderData: keepPreviousData,
+    staleTime: 1000 * 60,
     refetchOnWindowFocus: false,
   });
 }
