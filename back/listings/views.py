@@ -9,10 +9,16 @@ from rest_framework.response import Response
 
 # List all properties
 class PropertyListView(generics.ListAPIView):
-    queryset = Property.objects.filter(status__in=['ACTIVE', 'UNDER_REVIEW'])
     serializer_class = PropertySerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Property.objects.filter(status__in=['ACTIVE', 'UNDER_REVIEW'])
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        return queryset
 
 # Create new property
 class PropertyCreateView(generics.CreateAPIView):

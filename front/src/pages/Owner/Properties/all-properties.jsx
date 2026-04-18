@@ -39,7 +39,7 @@ export default function AllProperties() {
               }}
             >
               <div style={{ fontWeight: 600, marginBottom: "0.5rem" }}>
-                {property.title || property.name || `Property ${property.id}`}
+                {property.property_name || property.title || property.name || `Property ${property.id}`}
               </div>
               <div>Price: {property.price ?? "N/A"}</div>
               <div>Status: {property.status ?? "N/A"}</div>
