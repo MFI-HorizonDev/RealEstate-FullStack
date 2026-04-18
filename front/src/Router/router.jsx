@@ -7,6 +7,7 @@ import App from "../App";
 import Signup from "../login/signup";
 import AdminAuditDashboard from "../pages/Admin/AdminAuditDashboard";
 import AllProperties from "../pages/Owner/Properties/all-properties";
+import TestPagination from "../pages/TestPagination";
 export let routes = createBrowserRouter([
   // {
   //   path: "",
@@ -36,6 +37,10 @@ export let routes = createBrowserRouter([
   {
     path: "admin/audit-dashboard",
     element: <AdminAuditDashboard />,
+  },
+  {
+    path: "test-pagination",
+    element: <TestPagination />,
   },
   {
     path: "*",
