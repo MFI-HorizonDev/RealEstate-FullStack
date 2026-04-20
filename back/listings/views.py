@@ -1,11 +1,21 @@
-from rest_framework import generics,permissions, status
+from rest_framework import generics, permissions, status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from .serializers import *
 from core.permissions import *
 from .pricing import PricingEngine
+from .tasks import update_all_market_buffers
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+# Health Check
+class HealthCheckView(APIView):
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request):
+        return Response({"status": "ok", "message": "Backend is running"})
 
 # List all properties
 class PropertyListView(generics.ListAPIView):
@@ -14,10 +24,10 @@ class PropertyListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Property.objects.filter(status__in=['ACTIVE', 'UNDER_REVIEW'])
-        status = self.request.query_params.get('status')
-        if status:
-            queryset = queryset.filter(status=status)
+        queryset = Property.objects.filter(status__in=['ACTIVE', 'UNDER_REVIEW', 'REJECTED', 'INACTIVE'])
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
         return queryset
 
 # Create new property
@@ -37,7 +47,7 @@ class PropertyRetrieveView(generics.RetrieveAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-# Update property
+# Update property (owner/agent only)
 class PropertyUpdateView(generics.UpdateAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertyCreateSerializer
@@ -51,6 +61,29 @@ class PropertyDeleteView(generics.DestroyAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
 
+# Admin-only: approve or reject a flagged listing by updating its status
+class AdminPropertyStatusView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminGroup]
+
+    def patch(self, request, pk):
+        try:
+            property_obj = Property.objects.get(pk=pk)
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        new_status = request.data.get("status")
+        allowed = [s[0] for s in Property.STATUS_TYPES]
+        if new_status not in allowed:
+            return Response(
+                {"detail": f"Invalid status. Allowed values: {allowed}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        property_obj.status = new_status
+        property_obj.save(update_fields=["status"])
+        return Response({"id": pk, "status": new_status}, status=status.HTTP_200_OK)
+
 # List all images for a property
 class PropertyImageListView(generics.ListAPIView):
     serializer_class = PropertyImageSerializer
@@ -62,7 +95,7 @@ class PropertyImageListView(generics.ListAPIView):
 
 # Create image for a property
 class PropertyImageCreateView(generics.CreateAPIView):
-    serializer_class = PropertyImageSerializer
+    serializer_class = PropertyImageCreateSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
@@ -205,6 +238,7 @@ class ValuationPreviewView(generics.RetrieveAPIView):
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = []
+    authentication_classes = []
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -225,3 +259,141 @@ class RegisterView(generics.CreateAPIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }, status=status.HTTP_201_CREATED)
+class UserProfileView(generics.RetrieveAPIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+        # Ensure user has a profile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        
+        return Response({
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_superuser': user.is_superuser,
+            'groups': [group.name for group in user.groups.all()],
+            'profile': {
+                'profile_image': profile.profile_image.url if profile.profile_image else None,
+                'bio': profile.bio,
+                'phone_number': profile.phone_number,
+                'address': profile.address,
+                'city': profile.city,
+                'state': profile.state,
+                'country': profile.country,
+                'zipcode': profile.zipcode,
+            }
+        })
+
+
+class UserProfileUpdateView(generics.UpdateAPIView):
+    """Update user profile with image upload"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        user = self.request.user
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        return profile
+
+    def get_serializer_class(self):
+        return UserProfileUpdateSerializer
+
+    def perform_update(self, serializer):
+        serializer.save()
+
+
+class UserProfileRetrieveView(generics.RetrieveAPIView):
+    """Retrieve user profile by user ID"""
+    serializer_class = UserDetailSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = User.objects.all()
+    lookup_field = 'pk'
+
+
+# ===== SUPER ADMIN CRUD ENDPOINTS =====
+
+class AdminUserListView(generics.ListAPIView):
+    """List all users (SuperAdmin only)"""
+    serializer_class = UserDetailSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = User.objects.all()
+
+
+class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Get, update, or delete a user (SuperAdmin only)"""
+    serializer_class = UserDetailSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = User.objects.all()
+    lookup_field = 'pk'
+
+
+class AdminPropertyListView(generics.ListAPIView):
+    """List all properties regardless of status (SuperAdmin only)"""
+    serializer_class = PropertySerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = Property.objects.all()
+
+
+class AdminPropertyDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Get, update, or delete any property (SuperAdmin only)"""
+    serializer_class = PropertyCreateSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = Property.objects.all()
+    lookup_field = 'pk'
+
+
+class AdminMunicipalityListView(generics.ListCreateAPIView):
+    """List and create municipalities (SuperAdmin only)"""
+    serializer_class = MunicipalitySerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = Municipality.objects.all()
+
+
+class AdminMunicipalityDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Get, update, or delete a municipality (SuperAdmin only)"""
+    serializer_class = MunicipalitySerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = Municipality.objects.all()
+    lookup_field = 'pk'
+
+
+class AdminAmenityListView(generics.ListCreateAPIView):
+    """List all amenities (SuperAdmin only)"""
+    serializer_class = AmenitySerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = Amenity.objects.all()
+
+
+class AdminAmenityDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Get, update, or delete an amenity (SuperAdmin only)"""
+    serializer_class = AmenitySerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsSuperAdminGroup]
+    queryset = Amenity.objects.all()
+    lookup_field = 'pk'
+
+
+class TriggerMarketBufferUpdateView(APIView):
+    """Manually trigger the market buffer recalculation — for demo/admin use only."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminGroup]
+
+    def post(self, request):
+        result = update_all_market_buffers()
+        return Response({"detail": result}, status=status.HTTP_200_OK)
+

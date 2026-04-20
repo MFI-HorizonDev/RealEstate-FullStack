@@ -22,7 +22,7 @@ class TourListCreateView(generics.ListCreateAPIView):
         if not user.is_authenticated:
             return Tour.objects.none()
 
-        if user.is_superuser or user.groups.filter(name="Admin").exists():
+        if user.is_superuser or user.groups.filter(name__in=["Admin", "SuperAdmin", "Super Admin"]).exists():
             return Tour.objects.all()
 
         if user.groups.filter(name="Agent").exists():
@@ -55,7 +55,7 @@ class TourRetrieveView(generics.RetrieveAPIView):
         user = self.request.user
         if not user.is_authenticated:
             return Tour.objects.none()
-        if user.is_superuser or user.groups.filter(name="Admin").exists():
+        if user.is_superuser or user.groups.filter(name__in=["Admin", "SuperAdmin", "Super Admin"]).exists():
             return Tour.objects.all()
         if user.groups.filter(name="Agent").exists():
             return Tour.objects.filter(agent=user)
@@ -70,11 +70,11 @@ class IsAgentOrAdminForTourAction(permissions.BasePermission):
             return False
         return bool(
             request.user.is_superuser
-            or request.user.groups.filter(name__in=["Agent", "Admin"]).exists()
+            or request.user.groups.filter(name__in=["Agent", "Admin", "SuperAdmin", "Super Admin"]).exists()
         )
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser or request.user.groups.filter(name="Admin").exists():
+        if request.user.is_superuser or request.user.groups.filter(name__in=["Admin", "SuperAdmin", "Super Admin"]).exists():
             return True
         return obj.agent_id == request.user.id
 
@@ -89,7 +89,7 @@ class TourAgentActionView(generics.UpdateAPIView):
     def get_queryset(self):
         user = self.request.user
         qs = super().get_queryset()
-        if user.is_superuser or user.groups.filter(name="Admin").exists():
+        if user.is_superuser or user.groups.filter(name__in=["Admin", "SuperAdmin", "Super Admin"]).exists():
             return qs
         if user.groups.filter(name="Agent").exists():
             return qs.filter(agent=user)

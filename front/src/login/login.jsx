@@ -1,153 +1,170 @@
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import React, { useState } from "react";
+import { useAuth } from "../services/api/useAuth";
+import { Link, useNavigate } from "react-router";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import bgImage from "@/assets/bg.jpg";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle, CircleCheckBig } from "lucide-react";
+import { AlertCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [login, setLogin] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const { loginMutation } = useAuth();
+  const [error, setError] = useState(null);
+  const [login, setLogin] = useState(false);
 
-  const navigate = useNavigate();
-
-  const HandleLogin = (e) => {
+  const HandleLogin = async (e) => {
     e.preventDefault();
-
     if (!email || !password) {
+      setError("Please enter both email/username and password.");
       setLogin(false);
       return;
     }
-    setLogin(true);
-
-    setTimeout(() => {
-      navigate("/");
-    }, 1000);
+    try {
+      setLogin(null); // Loading state
+      await loginMutation.mutateAsync({ email, password });
+      setLogin(true);
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1000);
+    } catch (err) {
+      setLogin(false);
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (err.detail) {
+        setError(err.detail);
+      } else {
+        setError("Network error. Is the backend server running?");
+      }
+    }
   };
 
   return (
-    <>
-      <div
-        className="relative flex min-h-screen flex-col items-center justify-center px-4 py-12 sm:px-6 lg:px-8"
-        style={{
-          backgroundImage: `
-            linear-gradient(
-              to bottom,
-              rgba(0, 0, 0, 0.70) 0%,
-              rgba(0, 0, 0, 0.60) 25%,
-              rgba(15, 10, 25, 0.50) 50%,
-              rgba(30, 20, 40, 0.40) 70%,
-              rgba(50, 30, 60, 0.30) 85%,
-              rgba(70, 40, 80, 0.20) 100%
-            ),
-            url(${bgImage})
-          `,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-          backgroundAttachment: "fixed",
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-br from-black/15 via-transparent to-black/25 pointer-events-none" />
+    <div className="flex min-h-[calc(100vh-72px)] bg-white">
+      {/* Left side - Image */}
+      <div className="hidden lg:block lg:w-1/2 relative bg-gray-900">
+        <div className="absolute inset-0 bg-blue-900/40 mix-blend-multiply z-10" />
+        <img
+          src="/src/assets/wow.jpg"
+          alt="Premium Real Estate"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute bottom-0 left-0 right-0 p-12 z-20 text-white">
+          <h2 className="text-4xl font-bold mb-4">Discover Your Next Home</h2>
+          <p className="text-xl text-gray-200 mb-8 max-w-lg">
+            Join thousands of users finding their dream properties through our premium verified listings.
+          </p>
+          <div className="flex gap-4">
+            <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-xl border border-white/30">
+              <span className="block text-2xl font-bold">10k+</span>
+              <span className="text-sm text-gray-200">Properties</span>
+            </div>
+            <div className="bg-white/20 backdrop-blur-md px-6 py-3 rounded-xl border border-white/30">
+              <span className="block text-2xl font-bold">5k+</span>
+              <span className="text-sm text-gray-200">Happy Users</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Right side - Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-16">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <div className="flex justify-center mb-6">
+              <Link to="/" className="w-14 h-14 bg-amber-900 text-white rounded-xl flex items-center justify-center shadow-lg hover:bg-amber-800 transition-colors cursor-pointer">
+                <span className="font-bold text-2xl">RE</span>
+              </Link>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Welcome back</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              Don't have an account?{" "}
+              <Link to="/signup" className="font-semibold text-blue-800 hover:text-blue-700 transition">
+                Create one today
+              </Link>
+            </p>
+          </div>
 
+          <div className="mt-10">
+            <form onSubmit={HandleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-900">
+                  Email or Username
+                </Label>
+                <Input
+                  id="email"
+                  type="text"
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 bg-gray-50 border-gray-200 focus:border-blue-800 focus:ring-blue-800/20"
+                />
+              </div>
 
-        <Card className="w-full max-w-md bg-black/70 backdrop-blur-xl border border-amber-900/30 rounded-2xl shadow-2xl shadow-black/60 hover:shadow-amber-900/30 transition-all duration-500 transform hover:scale-[1.02]">
-          <CardHeader className="space-y-1 pb-6 border-b border-amber-900/20">
-            <CardTitle className="text-3xl font-bold text-center text-white tracking-light">
-              Welcome Back
-            </CardTitle>
-            <CardDescription className="text-center text-gray-400">
-              Sign in to your account
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="pt-6">
-            <form onSubmit={HandleLogin} className="space-y-5">
-              <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="email" className="text-gray-300">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="password" className="text-gray-300">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-900">
                     Password
                   </Label>
+                  <a href="#" className="text-sm font-medium text-blue-800 hover:text-blue-700">
+                    Forgot password?
+                  </a>
+                </div>
+                <div className="relative">
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-black/40 border-amber-900/40 text-white placeholder:text-gray-500 focus:border-amber-600 focus:ring-amber-600/30 transition-colors"
+                    className="h-12 bg-gray-50 border-gray-200 focus:border-blue-800 focus:ring-blue-800/20 pr-10"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
-
-                <Button
-                  type="submit"
-                  className="w-full bg-gradient-to-r from-amber-700 to-amber-500 hover:from-amber-600 hover:to-amber-400 text-white font-medium py-6 rounded-xl shadow-lg shadow-amber-900/30 hover:shadow-amber-700/40 transition-all duration-300 transform hover:scale-[1.02]"
-                >
-                  Sign In
-                </Button>
               </div>
+
+              {login === false && error && (
+                <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" />
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              )}
+
+              {login === true && (
+                <div className="bg-green-50 border border-green-100 text-green-800 px-4 py-3 rounded-lg flex items-center justify-center gap-2 font-medium">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  Login successful! Redirecting...
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={login === null || login === true}
+                className="w-full h-12 bg-blue-800 hover:bg-blue-900 text-white font-semibold text-lg transition-all"
+              >
+                {login === null ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Signing in...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    Sign in
+                    <ArrowRight className="w-5 h-5" />
+                  </div>
+                )}
+              </Button>
             </form>
-          </CardContent>
-
-          <CardFooter className="flex flex-col gap-4 border-t border-amber-900/20 pt-6">
-            <Button
-              variant="outline"
-              className="w-full border-amber-900/50 text-amber-600 hover:bg-amber-950 hover:text-amber-500 transition-colors"
-              onClick={() => navigate("/signup")}
-            >
-              Don't have an account? Sign Up
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full bg-black/40 border-amber-900/40 text-blue-300 hover:bg-black/60"
-              disabled
-            >
-              Login with Email (coming soon)
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {login === true && (
-          <Alert className="max-w-md mt-6 bg-green-950/60 border-green-700/50 text-green-300 backdrop-blur-sm">
-            <CircleCheckBig className="h-5 w-5 text-green-400" />
-            <AlertTitle className="text-green-200">Login Successful</AlertTitle>
-            <AlertDescription>Redirecting you now...</AlertDescription>
-          </Alert>
-        )}
-
-        {login === false && (
-          <Alert variant="destructive" className="max-w-md mt-6 bg-red-950/60 border-red-500/50 text-red-400 backdrop-blur-sm">
-            <AlertCircle className="h-5 w-5 text-red-200" />
-            <AlertTitle className="text-red-200">Login Failed</AlertTitle>
-            <AlertDescription >Please enter both email and password.</AlertDescription>
-          </Alert>
-        )}
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
