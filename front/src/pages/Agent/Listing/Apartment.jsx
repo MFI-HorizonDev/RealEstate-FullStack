@@ -3,10 +3,21 @@ import { useProperties } from '../../../services/api/useProperties';
 
 export default function Apartment() {
   const token = localStorage.getItem("access");
-  const { data = [], isLoading, isError, error } = useProperties({ token, enabled: Boolean(token) });
+  const { data, isLoading, isError, error } = useProperties({
+    page: 1,
+    enabled: Boolean(token),
+  });
+
+  const properties = Array.isArray(data?.results)
+    ? data.results
+    : Array.isArray(data)
+      ? data
+      : [];
 
   // Filter for apartments only
-  const apartments = Array.isArray(data) ? data.filter(property => property.type === 'SALE' || property.type === 'RENT') : [];
+  const apartments = properties.filter(
+    (property) => property.type === "SALE" || property.type === "RENT"
+  );
 
   if (!token) {
     return (

@@ -8,23 +8,30 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
-const featuredProperties = [
-  // Copy your entire featuredProperties array from App.jsx here
-  {
-    title: "Bahay ni Lei, BGC",
-    subtitle: "Redefining High-End Apartments • ₱210,000/mo",
-    images: [
-      "https://rentalrealestate.com/wp-content/uploads/high-quality-real-estate-photography-accelerates-property-sales-and-increases-value.png",
-      "https://thumbs.dreamstime.com/b/elegant-bedroom-design-featuring-large-windows-soft-beige-curtains-modern-furniture-cozy-ambience-ideal-real-estate-398400996.jpg",
-      "https://2391de4ba78ae59a71f3-fe3f5161196526a8a7b5af72d4961ee5.ssl.cf3.rackcdn.com/cache/thumbnails/grosvenor-crescent-mews-de77f60e6a749647b49bb50bdc365c31.jpg",
-    ],
-  },
-  // ... rest of your properties
-];
+import { useProperties } from "@/services/api/useProperties";
+import { useTours } from "@/services/api/useTours";
+import { useMunicipalities } from "@/services/api/useMunicipalities";
+import { useSales } from "@/services/api/useSales";
+import { useAuth } from "@/services/api/useAuth";
 
 const Home = () => {
   const carouselRefs = useRef([]);
+  const { isLoggedIn } = useAuth();
+
+
+  // Fetch data from backend
+  const { data: propertyResponse, isLoading: loadingProperties } = useProperties({
+    page: 1,
+    enabled: isLoggedIn,
+  });
+  const properties = Array.isArray(propertyResponse?.results)
+    ? propertyResponse.results
+    : Array.isArray(propertyResponse)
+      ? propertyResponse
+      : [];
+  const { data: tours = [], isLoading: loadingTours } = useTours({ enabled: isLoggedIn });
+  const { data: municipalities = [], isLoading: loadingMunicipalities } = useMunicipalities({ enabled: isLoggedIn });
+  const { data: bookings = [], isLoading: loadingBookings } = useSales({ enabled: isLoggedIn });
 
   const scrollLeft = (index) => {
     if (carouselRefs.current[index]) {
@@ -41,7 +48,7 @@ const Home = () => {
   return (
     <div>
       {/* Hero Section */}
-      <div className="relative h-screen w-full overflow-hidden">
+      <div className="relative h-screen w-full overflow-hidden -mt-28">
         <img
           src="/src/assets/wow.jpg"
           className="w-full h-full object-cover"
@@ -66,7 +73,7 @@ const Home = () => {
                   min="0"
                   max="1500000"
                   defaultValue="750000"
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-800"
                 />
                 <div className="flex justify-between text-sm text-gray-600 mt-2">
                   <span>₱0</span>
@@ -77,20 +84,20 @@ const Home = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Location
                 </label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-800 focus:border-blue-800 bg-white">
                   <option>Any</option>
-                  <option>Ortigas Ave, Pasig</option>
-                  <option>Antipolo</option>
-                  <option>Uptown</option>
-                  <option>Mandaluyong</option>
-                  <option>Other Areas</option>
+                  {municipalities?.map((municipality) => (
+                    <option key={municipality.id} value={municipality.id}>
+                      {municipality.municipality_name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Purpose
                 </label>
-                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                <select className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-800 focus:border-blue-800 bg-white">
                   <option>Any</option>
                   <option>For Sale</option>
                   <option>For Rent</option>
@@ -110,21 +117,21 @@ const Home = () => {
       {/* Features Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 mt-12 md:mt-16 mb-16">
         <div className="text-center p-6 md:p-8 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition">
-          <House className="h-20 w-20 mx-auto mb-4 text-blue-700" />
+          <House className="h-20 w-20 mx-auto mb-4 text-blue-800" />
           <h3 className="text-xl font-semibold mb-3">Hundreds of Listings</h3>
           <p className="text-gray-700 text-sm md:text-base">
             dito description sa susunod nalang lagyan boss
           </p>
         </div>
         <div className="text-center p-6 md:p-8 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition">
-          <KeyRound className="h-20 w-20 mx-auto mb-4 text-blue-700" />
+          <KeyRound className="h-20 w-20 mx-auto mb-4 text-amber-900" />
           <h3 className="text-xl font-semibold mb-3">Relocation Support</h3>
           <p className="text-gray-700 text-sm md:text-base">
             dito description sa susunod nalang lagyan boss
           </p>
         </div>
         <div className="text-center p-6 md:p-8 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition">
-          <Search className="h-20 w-20 mx-auto mb-4 text-blue-700" />
+          <Search className="h-20 w-20 mx-auto mb-4 text-blue-800" />
           <h3 className="text-xl font-semibold mb-3">Dedicated Conciergess</h3>
           <p className="text-gray-700 text-sm md:text-base">
             dito description sa susunod nalang lagyan boss
@@ -134,49 +141,45 @@ const Home = () => {
 
       {/* Featured Properties */}
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12 md:py-16">
-        <CardTitle className="text-center font-bold text-3xl mb-8 text-gray-800">
+        <CardTitle className="text-center font-bold text-3xl mb-8 text-blue-800">
           Featured Properties
         </CardTitle>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12">
-          {featuredProperties.map((property, index) => (
-            <div key={index} className="space-y-4">
-              <div className="relative rounded-2xl overflow-hidden shadow-xl group">
-                <div
-                  ref={(el) => (carouselRefs.current[index] = el)}
-                  className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-0 scrollbar-hide"
-                >
-                  {property.images.map((imgSrc, imgIdx) => (
-                    <img
-                      key={imgIdx}
-                      src={imgSrc}
-                      className="flex-shrink-0 w-full h-[340px] md:h-[420px] object-cover snap-center"
-                      alt={`${property.title} ${imgIdx + 1}`}
-                    />
-                  ))}
+        {loadingProperties && <p className="text-center text-gray-600">Loading properties...</p>}
+
+        {properties && properties.length === 0 && !loadingProperties && (
+          <p className="text-center text-gray-600">No properties available.</p>
+        )}
+
+        {Array.isArray(properties) && properties.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12">
+            {properties.slice(0, 3).map((property, index) => (
+              <div key={property.id} className="space-y-4">
+                <div className="relative rounded-2xl overflow-hidden shadow-xl group">
+                  <div className="w-full h-[340px] md:h-[420px] bg-gray-300 rounded-2xl overflow-hidden">
+                    {property.images && property.images.length > 0 ? (
+                      <img
+                        src={property.images[0].image}
+                        className="w-full h-full object-cover"
+                        alt={property.property_name}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">
+                        No image available
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <button
-                  onClick={() => scrollLeft(index)}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/70 transition"
-                >
-                  <ChevronLeft size={28} />
-                </button>
-                <button
-                  onClick={() => scrollRight(index)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-3 rounded-full hover:bg-black/70 transition"
-                >
-                  <ChevronRight size={28} />
-                </button>
+                <h3 className="text-xl font-bold text-gray-800 text-center mt-4">
+                  {property.property_name || `Property ${property.id}`}
+                </h3>
+                <p className="text-gray-600 text-center text-sm">
+                  ₱{property.price?.toLocaleString()} • {property.status}
+                </p>
               </div>
-              <h3 className="text-xl font-bold text-gray-800 text-center mt-4">
-                {property.title}
-              </h3>
-              <p className="text-gray-600 text-center text-sm">
-                {property.subtitle}
-              </p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

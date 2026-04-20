@@ -23,6 +23,8 @@ class Property(models.Model):
         ("ACTIVE", "Active"),
         ("SOLD", "Sold"),
         ("UNDER_REVIEW", "Under Review"),
+        ("REJECTED", "Rejected"),
+        ("INACTIVE", "Inactive"),
     ]
     property_name = models.CharField(max_length=255)
     property_description = models.TextField(blank=True, null=True)
@@ -120,5 +122,26 @@ class Amenity(models.Model):
         return f"{self.name} in {self.property}"
 
 
+def user_profile_image_upload_path(instance, filename):
+    return f'profiles/user_{instance.user.id}/{filename}'
 
 
+class UserProfile(models.Model):
+    """Extended user profile with image support and role information"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    profile_image = models.ImageField(upload_to=user_profile_image_upload_path, blank=True, null=True)
+    bio = models.TextField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=100, blank=True, null=True)
+    zipcode = models.CharField(max_length=20, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name_plural = "User Profiles"
+
+    def __str__(self):
+        return f"Profile of {self.user.username}"

@@ -59,13 +59,15 @@ class PropertySerializer(serializers.ModelSerializer):
     images = PropertyImageSerializer(many=True, read_only=True)
     property_tours = serializers.SerializerMethodField()
     owner = serializers.StringRelatedField(read_only=True)
+    owner_id = serializers.PrimaryKeyRelatedField(source='owner', read_only=True)
     agent = serializers.StringRelatedField(read_only=True)
+    agent_id = serializers.PrimaryKeyRelatedField(source='agent', read_only=True)
     property_municipality = MunicipalitySerializer(read_only=True)
 
     class Meta:
         model = Property
         fields = '__all__'
-        read_only_fields = ['property_tours']
+        read_only_fields = ['property_tours', 'owner_id', 'agent_id']
 
     def get_property_tours(self, obj):
         from tours.serializers import TourSerializer
@@ -130,3 +132,59 @@ class RegisterSerializer(serializers.ModelSerializer):
                 pass 
 
         return user
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for user profile with image support"""
+    class Meta:
+        model = UserProfile
+        fields = ['id', 'user', 'profile_image', 'bio', 'phone_number', 'address', 
+                 'city', 'state', 'country', 'zipcode', 'created_at', 'updated_at']
+        read_only_fields = ['user', 'created_at', 'updated_at']
+
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """Serializer for updating user profile with image"""
+    class Meta:
+        model = UserProfile
+        fields = ['profile_image', 'bio', 'phone_number', 'address', 
+                 'city', 'state', 'country', 'zipcode']
+
+    def validate_profile_image(self, value):
+        if value:
+            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            extension = value.name.lower()[-4:] if len(value.name) > 4 else value.name.lower()[-3:]
+            if extension not in valid_extensions:
+                raise serializers.ValidationError("Unsupported file extension. Only JPG, PNG, GIF, and WebP files are allowed.")
+
+            valid_content_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            if value.content_type not in valid_content_types:
+                raise serializers.ValidationError("Unsupported file type. Only image files are allowed.")
+                
+            # Limit file size to 5MB
+            if value.size > 5 * 1024 * 1024:
+                raise serializers.ValidationError("Profile image cannot exceed 5MB.")
+
+        return value
+
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    """Detailed user information including profile"""
+    profile = UserProfileSerializer(read_only=True, required=False, allow_null=True)
+    groups = serializers.StringRelatedField(many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 
+                 'is_superuser', 'groups', 'profile', 'is_staff']
+        read_only_fields = ['id', 'is_superuser', 'is_staff']
+
+    def to_representation(self, instance):
+        """Ensure profile exists and handle serialization"""
+        # Auto-create profile if it doesn't exist
+        if not hasattr(instance, 'profile') or instance.profile is None:
+            UserProfile.objects.get_or_create(user=instance)
+            # Refresh the instance to get the profile
+            instance.refresh_from_db()
+        
+        return super().to_representation(instance)

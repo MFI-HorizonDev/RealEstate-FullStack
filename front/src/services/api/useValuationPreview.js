@@ -1,41 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
-import { BASE_URL } from "./config";
+import { apiGet } from "./apiClient";
 
-async function fetchValuationPreview({ propertyId, formData, token }) {
-  if (!propertyId) {
-    throw new Error("propertyId is required");
-  }
-
+export function useValuationPreview({ propertyId, formData, enabled = true } = {}) {
   const params = new URLSearchParams();
-  Object.entries(formData || {}).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      params.append(key, String(value));
-    }
-  });
-
-  const url = `${BASE_URL}/properties/${propertyId}/valuation-preview/?${params.toString()}`;
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch valuation preview");
+  if (formData) {
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    });
   }
 
-  return response.json();
-}
+  const queryString = params.toString() ? `?${params.toString()}` : "";
 
-export function useValuationPreview({ propertyId, formData, token, enabled = true }) {
   return useQuery({
     queryKey: ["valuation-preview", propertyId, formData],
-    queryFn: () => fetchValuationPreview({ propertyId, formData, token }),
+    queryFn: () => apiGet(`/properties/${propertyId}/valuation-preview/${queryString}`),
     enabled: enabled && Boolean(propertyId),
     staleTime: 0,
     refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      if (error?.status === 401) return false;
+      return failureCount < 2;
+    },
   });
 }
 

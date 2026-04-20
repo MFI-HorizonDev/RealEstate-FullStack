@@ -1,13 +1,27 @@
 import { useState } from "react";
 import { useProperties } from "../services/api/useProperties";
+import { isUserLoggedIn } from "../services/api/useAuth";
 
 export default function TestPagination() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, isError, error, isFetching } = useProperties(page);
+  const loggedIn = isUserLoggedIn();
+  const { data, isLoading, isError, error, isFetching } = useProperties({
+    page,
+    enabled: loggedIn,
+  });
 
   const results = data?.results ?? [];
   const hasNext = Boolean(data?.next);
   const hasPrevious = Boolean(data?.previous);
+
+  if (!loggedIn) {
+    return (
+      <div className="mx-auto max-w-4xl p-6 space-y-4">
+        <h1 className="text-2xl font-semibold">Test Pagination</h1>
+        <p className="text-sm text-slate-600">Please sign in to test paginated backend responses.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl p-6 space-y-4">

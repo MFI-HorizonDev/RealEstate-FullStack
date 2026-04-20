@@ -46,7 +46,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.WARNING('\nSTEP 2: Creating superuser...'))
 
         # Create a superuser for admin access
-        superuser_username = 'superadmin'
+        superuser_username = 'superadmin@realestate.com'  # Use email as username for login
         superuser_email = 'superadmin@realestate.com'
         superuser_password = 'superadmin123'
 

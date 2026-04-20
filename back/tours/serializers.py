@@ -25,22 +25,58 @@ def agent_has_scheduled_conflict(agent, tour_datetime, exclude_tour_pk=None):
 
 class TourSerializer(serializers.ModelSerializer):
     buyer = serializers.PrimaryKeyRelatedField(read_only=True)
+    buyer_details = serializers.SerializerMethodField()
     agent = serializers.PrimaryKeyRelatedField(read_only=True)
+    agent_details = serializers.SerializerMethodField()
     property = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all())
+    property_details = serializers.SerializerMethodField()
 
     class Meta:
         model = Tour
         fields = [
             "id",
             "property",
+            "property_details",
             "agent",
+            "agent_details",
             "buyer",
+            "buyer_details",
             "tour_datetime",
             "status",
             "created_at",
             "updated_at",
         ]
         read_only_fields = ["agent", "buyer", "status", "created_at", "updated_at"]
+
+    def get_buyer_details(self, obj):
+        if obj.buyer:
+            return {
+                "id": obj.buyer.id,
+                "first_name": obj.buyer.first_name,
+                "last_name": obj.buyer.last_name,
+                "email": obj.buyer.email
+            }
+        return None
+
+    def get_agent_details(self, obj):
+        if obj.agent:
+            return {
+                "id": obj.agent.id,
+                "first_name": obj.agent.first_name,
+                "last_name": obj.agent.last_name,
+                "email": obj.agent.email
+            }
+        return None
+
+    def get_property_details(self, obj):
+        if obj.property:
+            return {
+                "id": obj.property.id,
+                "property_name": obj.property.property_name,
+                "property_address": obj.property.property_address,
+                "price": obj.property.price
+            }
+        return None
 
     def validate_tour_datetime(self, value):
         if self.instance is None and value < timezone.now():
