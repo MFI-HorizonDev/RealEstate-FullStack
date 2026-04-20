@@ -4,6 +4,7 @@ import { createBrowserRouter } from "react-router";
 import PublicLayout from "../components/layout/PublicLayout";
 import DashboardLayout from "../components/layout/DashboardLayout";
 import ProtectedRoute from "./ProtectedRoute";
+import GuestOnlyRoute from "./GuestOnlyRoute";
 
 // Auth
 import Login from "../login/login";
@@ -111,8 +112,8 @@ export let routes = createBrowserRouter([
 
   // ── Misc ─────────────────────────────────────────────────────────────────────
   { path: "test-pagination", element: dash(<TestPagination />) },
-  { path: "login",      element: <Login /> },
-  { path: "signup",     element: <Signup /> },
+  { path: "login",      element: <GuestOnlyRoute><Login /></GuestOnlyRoute> },
+  { path: "signup",     element: <GuestOnlyRoute><Signup /></GuestOnlyRoute> },
   { path: "auth-debug", element: <AuthDebug /> },
   { path: "*",          element: <Notfound /> },
 ]);

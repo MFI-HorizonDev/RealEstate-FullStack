@@ -16,8 +16,11 @@ import {
 } from "@/components/ui/card";
 import {
   useApproveListing,
+  useApproveRoleRequest,
   useFlaggedListings,
+  useRejectRoleRequest,
   useRejectListing,
+  useRoleRequests,
 } from "@/services/api/adminAuditHooks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -37,6 +40,9 @@ export default function AdminAuditDashboard() {
   
   const approveMutation = useApproveListing(token);
   const rejectMutation = useRejectListing(token);
+  const { data: roleRequests = [], isLoading: isRoleRequestsLoading } = useRoleRequests(token, "PENDING", ["Agent", "Owner"]);
+  const approveRoleMutation = useApproveRoleRequest(token);
+  const rejectRoleMutation = useRejectRoleRequest(token);
 
   const handleApprove = useCallback((id, name) => {
     const toastId = toast.loading(`Approving ${name}...`);
@@ -268,6 +274,97 @@ export default function AdminAuditDashboard() {
           </CardContent>
         </Card>
       </Tabs>
+
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Pending Role Requests</CardTitle>
+          <CardDescription>
+            Users choose a role on signup, then Admin approves or rejects it here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isRoleRequestsLoading ? (
+            <p className="text-sm text-slate-500">Loading role requests...</p>
+          ) : roleRequests.length === 0 ? (
+            <p className="text-sm text-slate-500">No pending role requests.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-md border border-gray-100 shadow-sm">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50">
+                  <tr className="border-b">
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">User</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Email</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Requested Role</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Verification</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roleRequests.map((req) => (
+                    <tr key={req.id} className="border-b hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 align-middle">
+                        {req.user?.first_name} {req.user?.last_name} ({req.user?.username})
+                      </td>
+                      <td className="px-4 py-3 align-middle">{req.user?.email}</td>
+                      <td className="px-4 py-3 align-middle">
+                        <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                          {req.requested_role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        {req.requested_role === "Agent" ? (
+                          <span className="rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
+                            Verified Agents
+                          </span>
+                        ) : req.requested_role === "Owner" ? (
+                          <span className="rounded bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700">
+                            Verified Owners
+                          </span>
+                        ) : (
+                          <span className="rounded bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
+                            Standard
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() =>
+                              approveRoleMutation.mutate(req.id, {
+                                onSuccess: () =>
+                                  toast.success(
+                                    `${req.requested_role} verified. Tiered cooldown now uses verified rate.`,
+                                  ),
+                              })
+                            }
+                            disabled={approveRoleMutation.isPending || rejectRoleMutation.isPending}
+                          >
+                            Verify
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() =>
+                              rejectRoleMutation.mutate(req.id, {
+                                onSuccess: () => toast.success(`${req.requested_role} request rejected.`),
+                              })
+                            }
+                            disabled={approveRoleMutation.isPending || rejectRoleMutation.isPending}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

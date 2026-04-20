@@ -8,6 +8,7 @@ from .pricing import PricingEngine
 from .throttles import VerifiedAgentThrottle, UnverifiedAgentThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.contrib.auth.models import Group
 
 # Health Check
 class HealthCheckView(APIView):
@@ -397,4 +398,60 @@ class TriggerMarketBufferUpdateView(APIView):
     def post(self, request):
         result = update_all_market_buffers()
         return Response({"detail": result}, status=status.HTTP_200_OK)
+
+
+class AdminRoleRequestListView(generics.ListAPIView):
+    """List user role requests for admin approval workflow."""
+    serializer_class = RoleRequestSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminGroup]
+
+    def get_queryset(self):
+        status_param = self.request.query_params.get("status", "PENDING")
+        role_param = self.request.query_params.get("role")
+        qs = UserProfile.objects.exclude(requested_role__isnull=True).exclude(requested_role="")
+        if status_param:
+            qs = qs.filter(role_request_status=status_param)
+        if role_param:
+            roles = [r.strip() for r in role_param.split(",") if r.strip()]
+            if roles:
+                qs = qs.filter(requested_role__in=roles)
+        return qs.select_related("user").order_by("-updated_at")
+
+
+class AdminRoleRequestActionView(APIView):
+    """Approve or reject a requested role (Admin only)."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminGroup]
+
+    def patch(self, request, pk):
+        try:
+            profile = UserProfile.objects.select_related("user").get(pk=pk)
+        except UserProfile.DoesNotExist:
+            return Response({"detail": "Role request not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        action = request.data.get("action")
+        if action not in ["approve", "reject"]:
+            return Response({"detail": "Action must be 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not profile.requested_role:
+            return Response({"detail": "No requested role to review."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action == "approve":
+            role_name = profile.requested_role
+            group, _ = Group.objects.get_or_create(name=role_name)
+            profile.user.groups.add(group)
+            if role_name == "Agent":
+                verified_group, _ = Group.objects.get_or_create(name="Verified Agents")
+                profile.user.groups.add(verified_group)
+            elif role_name == "Owner":
+                verified_group, _ = Group.objects.get_or_create(name="Verified Owners")
+                profile.user.groups.add(verified_group)
+            profile.role_request_status = "APPROVED"
+            profile.save(update_fields=["role_request_status", "updated_at"])
+            return Response({"detail": f"Role {role_name} approved."}, status=status.HTTP_200_OK)
+
+        profile.role_request_status = "REJECTED"
+        profile.save(update_fields=["role_request_status", "updated_at"])
+        return Response({"detail": "Role request rejected."}, status=status.HTTP_200_OK)
 

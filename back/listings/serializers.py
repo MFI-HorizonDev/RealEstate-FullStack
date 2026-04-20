@@ -120,16 +120,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop('password_confirm')
         role = validated_data.pop('role')
         password = validated_data.pop('password')
-        user = User.objects.create_user(**validated_data)
-        user.set_password(password)
-        user.save()
-
-        if role:
-            try:
-                group = Group.objects.get(name=role)
-                user.groups.add(group)
-            except Group.DoesNotExist:
-                pass 
+        user = User.objects.create_user(password=password, **validated_data)
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        profile.requested_role = role
+        profile.role_request_status = "PENDING"
+        profile.save(update_fields=["requested_role", "role_request_status"])
 
         return user
 
@@ -188,3 +183,21 @@ class UserDetailSerializer(serializers.ModelSerializer):
             instance.refresh_from_db()
         
         return super().to_representation(instance)
+
+
+class RoleRequestSerializer(serializers.ModelSerializer):
+    user = serializers.SerializerMethodField()
+
+    class Meta:
+        model = UserProfile
+        fields = ["id", "requested_role", "role_request_status", "created_at", "updated_at", "user"]
+
+    def get_user(self, obj):
+        return {
+            "id": obj.user.id,
+            "username": obj.user.username,
+            "email": obj.user.email,
+            "first_name": obj.user.first_name,
+            "last_name": obj.user.last_name,
+            "groups": [group.name for group in obj.user.groups.all()],
+        }

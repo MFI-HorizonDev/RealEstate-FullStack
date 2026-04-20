@@ -209,70 +209,10 @@ export default function Profile() {
                   <p className="text-gray-900 font-semibold text-lg">{user.email || 'Not provided'}</p>
                 </div>
               </div>
-
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">User ID</p>
-                  <p className="text-gray-900 font-mono font-bold text-lg">#{user.id}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
-                  <Calendar className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Member Since</p>
-                  <p className="text-gray-900 font-semibold text-lg">
-                    {user.date_joined ? new Date(user.date_joined).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Unknown'}
-                  </p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Additional Profile Information */}
-      {profile?.profile && (
-        <Card className="mt-8 shadow-sm border border-gray-100">
-          <CardHeader className="border-b border-gray-50">
-            <CardTitle className="text-xl font-bold text-gray-900">Extended Profile Information</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-6">
-              {profile.profile.bio && (
-                <div>
-                  <Label className="text-sm font-bold text-gray-600 uppercase tracking-wider">Bio</Label>
-                  <p className="text-gray-900 mt-2">{profile.profile.bio}</p>
-                </div>
-              )}
-
-              {profile.profile.phone_number && (
-                <div>
-                  <Label className="text-sm font-bold text-gray-600 uppercase tracking-wider">Phone</Label>
-                  <p className="text-gray-900 mt-2">{profile.profile.phone_number}</p>
-                </div>
-              )}
-
-              {(profile.profile.address || profile.profile.city) && (
-                <div>
-                  <Label className="text-sm font-bold text-gray-600 uppercase tracking-wider">Address</Label>
-                  <p className="text-gray-900 mt-2">
-                    {profile.profile.address && <>{profile.profile.address}<br /></>}
-                    {[profile.profile.city, profile.profile.state, profile.profile.country, profile.profile.zipcode]
-                      .filter(Boolean)
-                      .join(', ')}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Image Cropper Modal */}
       <ImageCropperModal

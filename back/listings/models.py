@@ -128,8 +128,25 @@ def user_profile_image_upload_path(instance, filename):
 
 class UserProfile(models.Model):
     """Extended user profile with image support and role information"""
+    ROLE_CHOICES = [
+        ("Buyer", "Buyer"),
+        ("Agent", "Agent"),
+        ("Owner", "Owner"),
+    ]
+    ROLE_REQUEST_STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     profile_image = models.ImageField(upload_to=user_profile_image_upload_path, blank=True, null=True)
+    requested_role = models.CharField(max_length=20, choices=ROLE_CHOICES, blank=True, null=True)
+    role_request_status = models.CharField(
+        max_length=12,
+        choices=ROLE_REQUEST_STATUS_CHOICES,
+        default="PENDING",
+    )
     bio = models.TextField(blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
