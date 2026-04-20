@@ -11,6 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { loginMutation } = useAuth();
+  const navigate = useNavigate();
   const [error, setError] = useState(null);
   const [login, setLogin] = useState(false);
 
@@ -26,7 +27,7 @@ export default function Login() {
       await loginMutation.mutateAsync({ email, password });
       setLogin(true);
       setTimeout(() => {
-        window.location.href = "/";
+        navigate("/", { replace: true });
       }, 1000);
     } catch (err) {
       setLogin(false);

@@ -15,13 +15,25 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
+            'number_positional',
+            nargs='?',
+            type=int,
+            help='Optional positional number of records to seed'
+        )
+        parser.add_argument(
             '--number',
             type=int,
             default=10
         )
+        parser.add_argument(
+            '--no-superadmin',
+            action='store_true',
+            help='Skip creating/updating the default superadmin account'
+        )
 
     def handle(self, *args, **options):
-        number = options['number']
+        number = options.get('number_positional') if options.get('number_positional') is not None else options['number']
+        create_superadmin = not options['no_superadmin']
         seeder = Seed.seeder()
 
         # =====================================================================
@@ -45,29 +57,32 @@ class Command(BaseCommand):
         # =====================================================================
         self.stdout.write(self.style.WARNING('\nSTEP 2: Creating superuser...'))
 
-        # Create a superuser for admin access
-        superuser_username = 'superadmin@realestate.com'  # Use email as username for login
-        superuser_email = 'superadmin@realestate.com'
-        superuser_password = 'superadmin123'
+        if create_superadmin:
+            # Create a superuser for admin access
+            superuser_username = 'superadmin@realestate.com'  # Use email as username for login
+            superuser_email = 'superadmin@realestate.com'
+            superuser_password = 'superadmin123'
 
-        superuser, created = User.objects.get_or_create(
-            username=superuser_username,
-            defaults={
-                'email': superuser_email,
-                'first_name': 'Super',
-                'last_name': 'Admin',
-            }
-        )
-        if created:
-            superuser.set_password(superuser_password)
+            superuser, created = User.objects.get_or_create(
+                username=superuser_username,
+                defaults={
+                    'email': superuser_email,
+                    'first_name': 'Super',
+                    'last_name': 'Admin',
+                }
+            )
+            if created:
+                superuser.set_password(superuser_password)
             superuser.is_staff = True
             superuser.is_superuser = True
             superuser.save()
             superuser.groups.add(groups['SuperAdmin'])
-            self.stdout.write(self.style.SUCCESS(f'  ✓ Created superuser: {superuser_username} (password: {superuser_password})'))
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  ✓ Created superuser: {superuser_username} (password: {superuser_password})'))
+            else:
+                self.stdout.write(self.style.SUCCESS(f'  • Superuser already exists: {superuser_username}'))
         else:
-            superuser.groups.add(groups['SuperAdmin'])
-            self.stdout.write(self.style.SUCCESS(f'  • Superuser already exists: {superuser_username}'))
+            self.stdout.write('  • Skipped superadmin creation (--no-superadmin)')
 
         self.stdout.write(self.style.WARNING('\nSTEP 3: Creating users with group assignments...'))
 
@@ -83,8 +98,9 @@ class Command(BaseCommand):
             )
             if created:
                 user.set_password('password123')
-                user.is_staff = True
-                user.save()
+            user.is_staff = True
+            user.is_superuser = False
+            user.save()
             user.groups.add(groups['Admin'])
             if created:
                 self.stdout.write(f'  ✓ Created Admin: {user.username}')
@@ -101,7 +117,9 @@ class Command(BaseCommand):
             )
             if created:
                 user.set_password('password123')
-                user.save()
+            user.is_staff = False
+            user.is_superuser = False
+            user.save()
             user.groups.add(groups['Agent'])
             if created:
                 self.stdout.write(f'  ✓ Created Agent: {user.username}')
@@ -118,7 +136,9 @@ class Command(BaseCommand):
             )
             if created:
                 user.set_password('password123')
-                user.save()
+            user.is_staff = False
+            user.is_superuser = False
+            user.save()
             user.groups.add(groups['Owner'])
             if created:
                 self.stdout.write(f'  ✓ Created Owner: {user.username}')
@@ -135,7 +155,9 @@ class Command(BaseCommand):
             )
             if created:
                 user.set_password('password123')
-                user.save()
+            user.is_staff = False
+            user.is_superuser = False
+            user.save()
             user.groups.add(groups['Buyer'])
             if created:
                 self.stdout.write(f'  ✓ Created Buyer: {user.username}')
@@ -344,6 +366,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Sales: {Sale.objects.count()}'))
         self.stdout.write(self.style.SUCCESS(f'Commissions: {Commission.objects.count()}'))
         self.stdout.write(self.style.SUCCESS(f'Pending Sale Requests: {PendingSaleRequest.objects.count()}'))
-        self.stdout.write(self.style.SUCCESS('\nDefault password for all users: password123'))
+        self.stdout.write(self.style.SUCCESS('\nDefault password for seeded non-superadmin users: password123'))
 
 

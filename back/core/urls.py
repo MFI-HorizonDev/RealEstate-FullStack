@@ -87,6 +87,8 @@ urlpatterns = [
 
     # Demo: manually trigger market buffer recalculation
     path('api/admin/trigger-market-update/', TriggerMarketBufferUpdateView.as_view(), name='trigger-market-update'),
+    path('api/admin/role-requests/', AdminRoleRequestListView.as_view(), name='admin-role-request-list'),
+    path('api/admin/role-requests/<int:pk>/action/', AdminRoleRequestActionView.as_view(), name='admin-role-request-action'),
 
     # ===== SUPER ADMIN CRUD ENDPOINTS =====
     # Users Management

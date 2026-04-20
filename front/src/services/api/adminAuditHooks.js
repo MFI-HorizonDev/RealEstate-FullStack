@@ -81,3 +81,37 @@ export function useRejectListing(token) {
   });
 }
 
+export function useRoleRequests(token, status = "PENDING", roles = ["Agent", "Owner"]) {
+  const roleQuery = roles.length ? `&role=${roles.join(",")}` : "";
+  return useQuery({
+    queryKey: ["role-requests", status, roles],
+    queryFn: () => apiGet(`/admin/role-requests/?status=${status}${roleQuery}`),
+    enabled: Boolean(token),
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useApproveRoleRequest(token) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profileId) =>
+      apiPatch(`/admin/role-requests/${profileId}/action/`, { action: "approve" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role-requests"] });
+    },
+  });
+}
+
+export function useRejectRoleRequest(token) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profileId) =>
+      apiPatch(`/admin/role-requests/${profileId}/action/`, { action: "reject" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["role-requests"] });
+    },
+  });
+}
+

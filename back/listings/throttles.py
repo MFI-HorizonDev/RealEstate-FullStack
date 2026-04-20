@@ -1,6 +1,12 @@
 from rest_framework.throttling import UserRateThrottle
 
 
+def is_verified_creator(user):
+    if not user or not user.is_authenticated:
+        return False
+    return user.groups.filter(name__in=["Verified Agents", "Verified Owners"]).exists()
+
+
 class VerifiedAgentThrottle(UserRateThrottle):
     rate = "1/5m"
 
@@ -12,7 +18,7 @@ class VerifiedAgentThrottle(UserRateThrottle):
         if not user or not user.is_authenticated:
             return True
 
-        is_verified = user.groups.filter(name="Verified Agents").exists()
+        is_verified = is_verified_creator(user)
         if not is_verified:
             return True
 
@@ -30,7 +36,7 @@ class UnverifiedAgentThrottle(UserRateThrottle):
         if not user or not user.is_authenticated:
             return True
 
-        is_verified = user.groups.filter(name="Verified Agents").exists()
+        is_verified = is_verified_creator(user)
         if is_verified:
             return True
 
