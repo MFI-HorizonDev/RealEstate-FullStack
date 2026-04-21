@@ -85,7 +85,10 @@ export function useRoleRequests(token, status = "PENDING", roles = ["Agent", "Ow
   const roleQuery = roles.length ? `&role=${roles.join(",")}` : "";
   return useQuery({
     queryKey: ["role-requests", status, roles],
-    queryFn: () => apiGet(`/admin/role-requests/?status=${status}${roleQuery}`),
+    queryFn: async () => {
+      const payload = await apiGet(`/admin/role-requests/?status=${status}${roleQuery}`);
+      return toList(payload);
+    },
     enabled: Boolean(token),
     refetchOnWindowFocus: false,
   });
