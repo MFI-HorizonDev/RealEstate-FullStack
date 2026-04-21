@@ -59,6 +59,11 @@ export default function PropertyDetails() {
   const images = property.images && property.images.length > 0
     ? property.images 
     : [{ image: "https://via.placeholder.com/800x600?text=No+Image+Available" }];
+  const resolveImageSrc = (src) => {
+    if (!src) return "https://via.placeholder.com/800x600?text=No+Image+Available";
+    if (src.startsWith("http")) return src;
+    return `http://127.0.0.1:8000${src}`;
+  };
 
   const handleBookTour = async (e) => {
     e.preventDefault();
@@ -122,9 +127,10 @@ export default function PropertyDetails() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12 h-[50vh] min-h-[400px]">
         <div className="md:col-span-3 bg-gray-100 rounded-2xl overflow-hidden relative">
           <img 
-            src={images[activeImage].image} 
+            src={resolveImageSrc(images[activeImage].image)} 
             alt="Main property view" 
             className="w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x600?text=No+Image+Available"; }}
           />
         </div>
         <div className="hidden md:flex flex-col gap-4 overflow-y-auto pr-2">
@@ -136,7 +142,12 @@ export default function PropertyDetails() {
                 activeImage === idx ? "border-blue-600 ring-2 ring-blue-600/30" : "border-transparent opacity-70 hover:opacity-100"
               }`}
             >
-              <img src={img.image} className="w-full h-full object-cover" alt={`Thumbnail ${idx + 1}`} />
+              <img
+                src={resolveImageSrc(img.image)}
+                className="w-full h-full object-cover"
+                alt={`Thumbnail ${idx + 1}`}
+                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x600?text=No+Image+Available"; }}
+              />
             </button>
           ))}
         </div>

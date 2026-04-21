@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User, Group
-from django.contrib.auth.password_validation import validate_password
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
@@ -103,7 +102,7 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         return property_obj
     
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True)
     password_confirm = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=[('Buyer', 'Buyer'), ('Agent', 'Agent'), ('Owner', 'Owner')], write_only=True)
 
@@ -140,10 +139,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile with image"""
+    email = serializers.EmailField(source="user.email", required=False)
+
     class Meta:
         model = UserProfile
         fields = ['profile_image', 'bio', 'phone_number', 'address', 
-                 'city', 'state', 'country', 'zipcode']
+                 'city', 'state', 'country', 'zipcode', 'email']
 
     def validate_profile_image(self, value):
         if value:
@@ -161,6 +162,14 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Profile image cannot exceed 5MB.")
 
         return value
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop("user", {})
+        email = user_data.get("email")
+        if email is not None:
+            instance.user.email = email
+            instance.user.save(update_fields=["email"])
+        return super().update(instance, validated_data)
 
 
 class UserDetailSerializer(serializers.ModelSerializer):

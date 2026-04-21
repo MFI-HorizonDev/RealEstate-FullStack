@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/services/api/useAuth';
-import { useUserProfile, useUploadProfileImage } from '@/services/api/useProfile';
+import { useUserProfile, useUploadProfileImage, useUpdateProfile } from '@/services/api/useProfile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +16,14 @@ export default function Profile() {
   const { user } = useAuth();
   const { data: profile, refetch } = useUserProfile();
   const uploadProfileImage = useUploadProfileImage();
+  const updateProfile = useUpdateProfile();
   const fileInputRef = useRef(null);
   
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showImageCropper, setShowImageCropper] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [profileFormData, setProfileFormData] = useState({
+    email: user?.email || '',
     bio: profile?.profile?.bio || '',
     phone_number: profile?.profile?.phone_number || '',
     address: profile?.profile?.address || '',
@@ -30,6 +32,20 @@ export default function Profile() {
     country: profile?.profile?.country || '',
     zipcode: profile?.profile?.zipcode || '',
   });
+
+  useEffect(() => {
+    if (!profile) return;
+    setProfileFormData({
+      email: profile?.email || user?.email || '',
+      bio: profile?.profile?.bio || '',
+      phone_number: profile?.profile?.phone_number || '',
+      address: profile?.profile?.address || '',
+      city: profile?.profile?.city || '',
+      state: profile?.profile?.state || '',
+      country: profile?.profile?.country || '',
+      zipcode: profile?.profile?.zipcode || '',
+    });
+  }, [profile, user]);
 
   if (!user) {
     return (
@@ -116,6 +132,22 @@ export default function Profile() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleProfileSave = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    Object.entries(profileFormData).forEach(([key, value]) => {
+      formData.append(key, value ?? "");
+    });
+    try {
+      await updateProfile.mutateAsync(formData);
+      toast.success("Profile updated successfully.");
+      setIsEditingProfile(false);
+      refetch();
+    } catch (error) {
+      toast.error(error.message || "Failed to update profile.");
+    }
   };
 
   return (
@@ -208,6 +240,44 @@ export default function Profile() {
                   <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Email Address</p>
                   <p className="text-gray-900 font-semibold text-lg">{user.email || 'Not provided'}</p>
                 </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                {!isEditingProfile ? (
+                  <Button type="button" variant="outline" onClick={() => setIsEditingProfile(true)}>
+                    Edit Profile
+                  </Button>
+                ) : (
+                  <form onSubmit={handleProfileSave} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        value={profileFormData.email}
+                        onChange={handleProfileFormChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        name="bio"
+                        value={profileFormData.bio}
+                        onChange={handleProfileFormChange}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={updateProfile.isPending}>
+                        {updateProfile.isPending ? "Saving..." : "Save"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setIsEditingProfile(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </div>
             </div>
           </CardContent>

@@ -104,8 +104,13 @@ class PropertyImageCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         property_id = self.kwargs['property_id']
         property_instance = Property.objects.get(pk=property_id)
-        if self.request.user == property_instance.owner or (
-            hasattr(property_instance, 'agent') and self.request.user == property_instance.agent
+        is_admin = self.request.user.groups.filter(name__in=["Admin", "SuperAdmin", "Super Admin"]).exists()
+        is_agent = self.request.user.groups.filter(name="Agent").exists()
+        if (
+            self.request.user == property_instance.owner
+            or (hasattr(property_instance, 'agent') and self.request.user == property_instance.agent)
+            or is_admin
+            or is_agent
         ):
             serializer.save(property_id=property_id)
         else:
