@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useValuationPreview } from "../../../services/api/useValuationPreview";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AddProperties() {
+  const { isAgent, isOwner } = useAuth();
   const [formData, setFormData] = useState({
     property_size: "",
     property_municipality: "",
@@ -62,8 +64,9 @@ export default function AddProperties() {
       {isFetching && <p>Checking valuation preview...</p>}
       {error && <p style={{ color: "red" }}>Preview failed.</p>}
 
-      {data && (
+      {(isAgent || isOwner) && data && (
         <div>
+          <p>Valuation Breakdown</p>
           <p>Base Price: {data.base_price}</p>
           <p>Amenity Impact: {data.amenity_impact}</p>
           <p>Estimated Total: {data.estimated_total}</p>

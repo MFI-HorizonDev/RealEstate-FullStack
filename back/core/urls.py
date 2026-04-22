@@ -63,6 +63,7 @@ urlpatterns = [
     path('api/tours/', TourListCreateView.as_view(), name='tour-list-create'),
     path('api/tours/<int:pk>/', TourRetrieveView.as_view(), name='tour-retrieve'),
     path('api/tours/<int:pk>/agent-action/', TourAgentActionView.as_view(), name='tour-agent-action'),
+    path('api/tours/<int:pk>/manage/', TourManageView.as_view(), name='tour-manage'),
 
     # Sales
     path('api/sales/', SaleListView.as_view(), name='sale-list'),

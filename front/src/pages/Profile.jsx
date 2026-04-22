@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/services/api/useAuth';
 import { useUserProfile, useUploadProfileImage, useUpdateProfile } from '@/services/api/useProfile';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { User, Mail, Shield, Calendar, Camera, AlertCircle, CheckCircle } from "lucide-react";
+import { User, Mail, Camera } from "lucide-react";
 import { toast } from 'sonner';
 import ImageCropperModal from '@/components/ImageCropperModal';
 
@@ -23,7 +23,7 @@ export default function Profile() {
   const [showImageCropper, setShowImageCropper] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [profileFormData, setProfileFormData] = useState({
-    email: user?.email || '',
+    email: '',
     bio: profile?.profile?.bio || '',
     phone_number: profile?.profile?.phone_number || '',
     address: profile?.profile?.address || '',
@@ -134,20 +134,27 @@ export default function Profile() {
     }));
   };
 
-  const handleProfileSave = async (e) => {
-    e.preventDefault();
+  const handleSaveProfile = () => {
     const formData = new FormData();
-    Object.entries(profileFormData).forEach(([key, value]) => {
-      formData.append(key, value ?? "");
+    formData.append("email", profileFormData.email || "");
+    formData.append("bio", profileFormData.bio || "");
+    formData.append("phone_number", profileFormData.phone_number || "");
+    formData.append("address", profileFormData.address || "");
+    formData.append("city", profileFormData.city || "");
+    formData.append("state", profileFormData.state || "");
+    formData.append("country", profileFormData.country || "");
+    formData.append("zipcode", profileFormData.zipcode || "");
+
+    updateProfile.mutate(formData, {
+      onSuccess: () => {
+        toast.success("Profile updated.");
+        setIsEditingProfile(false);
+        refetch();
+      },
+      onError: (error) => {
+        toast.error(error?.message || "Failed to update profile.");
+      },
     });
-    try {
-      await updateProfile.mutateAsync(formData);
-      toast.success("Profile updated successfully.");
-      setIsEditingProfile(false);
-      refetch();
-    } catch (error) {
-      toast.error(error.message || "Failed to update profile.");
-    }
   };
 
   return (
@@ -243,40 +250,40 @@ export default function Profile() {
               </div>
 
               <div className="pt-4 border-t border-gray-100">
-                {!isEditingProfile ? (
-                  <Button type="button" variant="outline" onClick={() => setIsEditingProfile(true)}>
-                    Edit Profile
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-gray-900">Profile Info</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditingProfile((v) => !v)}
+                  >
+                    {isEditingProfile ? "Cancel" : "Edit"}
                   </Button>
-                ) : (
-                  <form onSubmit={handleProfileSave} className="space-y-4">
-                    <div className="space-y-2">
+                </div>
+
+                {isEditingProfile && (
+                  <div className="space-y-3">
+                    <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={profileFormData.email}
-                        onChange={handleProfileFormChange}
-                      />
+                      <Input id="email" name="email" value={profileFormData.email} onChange={handleProfileFormChange} />
                     </div>
-                    <div className="space-y-2">
+                    <div>
                       <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        name="bio"
-                        value={profileFormData.bio}
-                        onChange={handleProfileFormChange}
-                      />
+                      <Textarea id="bio" name="bio" value={profileFormData.bio} onChange={handleProfileFormChange} />
                     </div>
-                    <div className="flex gap-2">
-                      <Button type="submit" disabled={updateProfile.isPending}>
-                        {updateProfile.isPending ? "Saving..." : "Save"}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => setIsEditingProfile(false)}>
-                        Cancel
-                      </Button>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input name="phone_number" placeholder="Phone" value={profileFormData.phone_number} onChange={handleProfileFormChange} />
+                      <Input name="city" placeholder="City" value={profileFormData.city} onChange={handleProfileFormChange} />
                     </div>
-                  </form>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input name="state" placeholder="State" value={profileFormData.state} onChange={handleProfileFormChange} />
+                      <Input name="country" placeholder="Country" value={profileFormData.country} onChange={handleProfileFormChange} />
+                    </div>
+                    <Input name="address" placeholder="Address" value={profileFormData.address} onChange={handleProfileFormChange} />
+                    <Input name="zipcode" placeholder="Zip Code" value={profileFormData.zipcode} onChange={handleProfileFormChange} />
+                    <Button onClick={handleSaveProfile} disabled={updateProfile.isPending}>
+                      {updateProfile.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

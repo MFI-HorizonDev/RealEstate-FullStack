@@ -1,5 +1,5 @@
 import React from "react";
-import { useTours, useTourAgentAction } from "@/services/api/useTours";
+import { useDeleteTour, useTours, useTourAgentAction, useUpdateTour } from "@/services/api/useTours";
 import { useAuth } from "@/services/api/useAuth";
 import { 
   Card, 
@@ -25,6 +25,11 @@ export default function Tours() {
   const { user, isLoggedIn, isLoading, isError, error } = useAuth();
   const { data: tours = [], isLoading: loadingTours } = useTours({ enabled: isLoggedIn });
   const { mutate: updateTourStatus, isPending: isUpdating } = useTourAgentAction();
+  const { mutate: updateTour, isPending: isManaging } = useUpdateTour();
+  const { mutate: deleteTour, isPending: isDeleting } = useDeleteTour();
+  const [editingTourId, setEditingTourId] = React.useState(null);
+  const [editDate, setEditDate] = React.useState("");
+  const [editTime, setEditTime] = React.useState("");
 
   const isAdmin = user?.groups?.includes("Admin") || 
                   user?.groups?.includes("SuperAdmin") || 
@@ -62,6 +67,43 @@ export default function Tours() {
         return `Failed: ${msg}`;
       },
     });
+  };
+
+  const handleComplete = (id) => {
+    updateTour({ id, data: { status: "COMPLETED" } });
+  };
+
+  const handleDelete = (id) => {
+    deleteTour(id);
+  };
+
+  const openEditSchedule = (tour) => {
+    const dt = tour?.tour_datetime ? new Date(tour.tour_datetime) : new Date();
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    const hh = String(dt.getHours()).padStart(2, "0");
+    const min = String(dt.getMinutes()).padStart(2, "0");
+    setEditingTourId(tour.id);
+    setEditDate(`${yyyy}-${mm}-${dd}`);
+    setEditTime(`${hh}:${min}`);
+  };
+
+  const saveSchedule = () => {
+    if (!editingTourId || !editDate || !editTime) return;
+    const iso = new Date(`${editDate}T${editTime}`).toISOString();
+    updateTour(
+      { id: editingTourId, data: { tour_datetime: iso } },
+      {
+        onSuccess: () => {
+          setEditingTourId(null);
+          setEditDate("");
+          setEditTime("");
+          toast.success("Tour schedule updated.");
+        },
+        onError: (err) => toast.error(err?.message || "Failed to update schedule."),
+      }
+    );
   };
 
 
@@ -163,6 +205,43 @@ export default function Tours() {
                       </div>
                     </div>
                   </div>
+
+                  {(isAdmin || isAgent) && editingTourId === tour.id && (
+                    <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 space-y-3">
+                      <p className="text-xs font-bold uppercase tracking-wider text-blue-800">Edit Schedule</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          value={editDate}
+                          onChange={(e) => setEditDate(e.target.value)}
+                          className="rounded border border-blue-200 px-2 py-1 text-sm"
+                        />
+                        <input
+                          type="time"
+                          value={editTime}
+                          onChange={(e) => setEditTime(e.target.value)}
+                          className="rounded border border-blue-200 px-2 py-1 text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-blue-700 hover:bg-blue-800 text-white"
+                          disabled={isManaging}
+                          onClick={saveSchedule}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingTourId(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
                 
                 {tour.status === "QUEUED" && (isAdmin || isAgent) && (
@@ -181,6 +260,42 @@ export default function Tours() {
                       className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold h-10 transition-transform active:scale-95"
                     >
                       Reject
+                    </Button>
+                    <Button
+                      onClick={() => openEditSchedule(tour)}
+                      disabled={isManaging}
+                      variant="outline"
+                      className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 font-bold h-10"
+                    >
+                      Edit Time
+                    </Button>
+                  </CardFooter>
+                )}
+
+                {tour.status === "SCHEDULED" && (isAdmin || isAgent) && (
+                  <CardFooter className="bg-gray-50/50 border-t border-gray-100 p-4 gap-3">
+                    <Button
+                      onClick={() => handleComplete(tour.id)}
+                      disabled={isManaging}
+                      className="flex-1 bg-blue-700 hover:bg-blue-800 text-white font-bold h-10"
+                    >
+                      Mark Completed
+                    </Button>
+                    <Button
+                      onClick={() => handleDelete(tour.id)}
+                      disabled={isDeleting}
+                      variant="outline"
+                      className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold h-10"
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      onClick={() => openEditSchedule(tour)}
+                      disabled={isManaging}
+                      variant="outline"
+                      className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 font-bold h-10"
+                    >
+                      Edit Time
                     </Button>
                   </CardFooter>
                 )}
@@ -204,8 +319,8 @@ export default function Tours() {
       )}
 
       {Array.isArray(tours) && tours.length > 0 && (
-        <Card className="bg-blue-900 text-white border-0 shadow-xl overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/src/assets/bg.jpg')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
+        <Card className="relative bg-blue-900 text-white border-0 shadow-xl overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none bg-[url('/src/assets/bg.jpg')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
           <CardHeader className="relative z-10">
             <CardTitle className="text-white text-xl">Overview</CardTitle>
           </CardHeader>

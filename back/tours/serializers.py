@@ -136,3 +136,29 @@ class TourAgentActionSerializer(serializers.ModelSerializer):
                 )
 
         return attrs
+
+
+class TourManageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tour
+        fields = ["status", "tour_datetime"]
+        extra_kwargs = {"tour_datetime": {"required": False}}
+
+    def validate(self, attrs):
+        status = attrs.get("status", self.instance.status)
+        dt = attrs.get("tour_datetime", self.instance.tour_datetime)
+
+        allowed_status = {
+            Tour.STATUS_QUEUED,
+            Tour.STATUS_SCHEDULED,
+            Tour.STATUS_COMPLETED,
+            Tour.STATUS_REJECTED,
+        }
+        if status not in allowed_status:
+            raise serializers.ValidationError({"status": "Invalid status."})
+
+        if dt and status == Tour.STATUS_SCHEDULED:
+            if agent_has_scheduled_conflict(self.instance.agent, dt, exclude_tour_pk=self.instance.pk):
+                raise serializers.ValidationError("The agent is already booked for this time block.")
+
+        return attrs

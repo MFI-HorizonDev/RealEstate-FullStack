@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router";
 
 // Layouts
 import PublicLayout from "../components/layout/PublicLayout";
-import withDashboardSidebar from "../components/layout/withDashboardSidebar";
+import DashboardLayout from "../components/layout/DashboardLayout";
 import ProtectedRoute from "./ProtectedRoute";
 import GuestOnlyRoute from "./GuestOnlyRoute";
 
@@ -48,19 +48,17 @@ import MyListings from "../pages/Owner/MyListings";
 import BuyerDashboard from "../pages/Customer/BuyerDashboard";
 
 // ── Helper: wrap in DashboardLayout + ProtectedRoute ──────────────────────────
-const dash = (ElementComponent, requiredRole = null) => {
-  const GuardedPage = () => (
+const dash = (element, requiredRole = null) => (
+  <DashboardLayout>
     <ProtectedRoute requiredRole={requiredRole}>
-      <ElementComponent />
+      {element}
     </ProtectedRoute>
-  );
-  const Wrapped = withDashboardSidebar(GuardedPage);
-  return <Wrapped />;
-};
+  </DashboardLayout>
+);
 
 export let routes = createBrowserRouter([
   // ── Public pages ────────────────────────────────────────────────────────────
-  { path: "/", element: dash(App) },
+  { path: "/", element: <PublicLayout><App /></PublicLayout> },
 
   {
     path: "all-properties",
@@ -88,32 +86,52 @@ export let routes = createBrowserRouter([
   },
 
   // ── Dashboard: shared ────────────────────────────────────────────────────────
-  { path: "tours",    element: dash(Tours) },
-  { path: "bookings", element: dash(Bookings) },
+  { path: "tours",    element: dash(<Tours />) },
+  { path: "bookings", element: dash(<Bookings />) },
 
   // ── Dashboard: Admin ─────────────────────────────────────────────────────────
-  { path: "admin/audit-dashboard", element: dash(AdminAuditDashboard, "Admin") },
-  { path: "admin/pending-sales",   element: dash(PendingSales, "Admin") },
-  { path: "admin/market-update",   element: dash(MarketUpdate, "Admin") },
+  { path: "admin/audit-dashboard", element: dash(<AdminAuditDashboard />, "Admin") },
+  {
+    path: "dashboard/audit",
+    element: (
+      <DashboardLayout>
+        <ProtectedRoute allow={(auth) => auth.isAdmin} redirectTo="/">
+          <AdminAuditDashboard />
+        </ProtectedRoute>
+      </DashboardLayout>
+    ),
+  },
+  { path: "admin/pending-sales",   element: dash(<PendingSales />,         "Admin") },
+  { path: "admin/market-update",   element: dash(<MarketUpdate />,         "Admin") },
 
   // ── Dashboard: Agent ─────────────────────────────────────────────────────────
-  { path: "agent/dashboard",   element: dash(AgentDashboard, "Agent") },
-  { path: "agent/properties",  element: dash(AgentProperties, "Agent") },
-  { path: "agent/commissions", element: dash(AgentCommissions, "Agent") },
+  { path: "agent/dashboard",   element: dash(<AgentDashboard />,   "Agent") },
+  {
+    path: "dashboard/agent",
+    element: (
+      <DashboardLayout>
+        <ProtectedRoute allow={(auth) => auth.isAgent || auth.isOwner} redirectTo="/">
+          <AgentDashboard />
+        </ProtectedRoute>
+      </DashboardLayout>
+    ),
+  },
+  { path: "agent/properties",  element: dash(<AgentProperties />,  "Agent") },
+  { path: "agent/commissions", element: dash(<AgentCommissions />, "Agent") },
 
   // ── Dashboard: SuperAdmin ─────────────────────────────────────────────────────
-  { path: "superadmin/users",      element: dash(ManageUsers) },
-  { path: "superadmin/properties", element: dash(ManageProperties) },
+  { path: "superadmin/users",      element: dash(<ManageUsers />) },
+  { path: "superadmin/properties", element: dash(<ManageProperties />) },
 
   // ── Dashboard: Owner ─────────────────────────────────────────────────────────
-  { path: "owner/dashboard",  element: dash(OwnerDashboard, "Owner") },
-  { path: "owner/listings",   element: dash(MyListings, "Owner") },
+  { path: "owner/dashboard",  element: dash(<OwnerDashboard />, "Owner") },
+  { path: "owner/listings",   element: dash(<MyListings />,     "Owner") },
 
   // ── Dashboard: Buyer ─────────────────────────────────────────────────────────
-  { path: "buyer/dashboard", element: dash(BuyerDashboard, "Buyer") },
+  { path: "buyer/dashboard", element: dash(<BuyerDashboard />, "Buyer") },
 
   // ── Misc ─────────────────────────────────────────────────────────────────────
-  { path: "test-pagination", element: dash(TestPagination) },
+  { path: "test-pagination", element: dash(<TestPagination />) },
   { path: "login",      element: <GuestOnlyRoute><Login /></GuestOnlyRoute> },
   { path: "signup",     element: <GuestOnlyRoute><Signup /></GuestOnlyRoute> },
   { path: "auth-debug", element: <AuthDebug /> },

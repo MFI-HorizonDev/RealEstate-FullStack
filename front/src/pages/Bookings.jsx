@@ -127,8 +127,8 @@ export default function Bookings() {
       )}
 
       {Array.isArray(bookings) && bookings.length > 0 && (
-        <Card className="bg-blue-900 text-white border-0 shadow-xl overflow-hidden">
-          <div className="absolute inset-0 bg-[url('/src/assets/wow.jpg')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
+        <Card className="relative bg-blue-900 text-white border-0 shadow-xl overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none bg-[url('/src/assets/wow.jpg')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
           <CardHeader className="relative z-10">
             <CardTitle className="text-white text-xl">Bookings Summary</CardTitle>
           </CardHeader>

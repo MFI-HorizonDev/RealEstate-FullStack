@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.password_validation import validate_password
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
@@ -61,6 +62,7 @@ class PropertySerializer(serializers.ModelSerializer):
     owner_id = serializers.PrimaryKeyRelatedField(source='owner', read_only=True)
     agent = serializers.StringRelatedField(read_only=True)
     agent_id = serializers.PrimaryKeyRelatedField(source='agent', read_only=True)
+    agent_details = serializers.SerializerMethodField()
     property_municipality = MunicipalitySerializer(read_only=True)
 
     class Meta:
@@ -72,6 +74,16 @@ class PropertySerializer(serializers.ModelSerializer):
         from tours.serializers import TourSerializer
         tours = obj.tours.all()
         return TourSerializer(tours, many=True, context=self.context).data
+
+    def get_agent_details(self, obj):
+        if obj.agent:
+            return {
+                "id": obj.agent.id,
+                "email": obj.agent.email,
+                "first_name": obj.agent.first_name,
+                "last_name": obj.agent.last_name,
+            }
+        return None
 
 
 class PropertyCreateSerializer(serializers.ModelSerializer):
@@ -102,7 +114,7 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         return property_obj
     
 class RegisterSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=[('Buyer', 'Buyer'), ('Agent', 'Agent'), ('Owner', 'Owner')], write_only=True)
 
@@ -139,12 +151,12 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating user profile with image"""
-    email = serializers.EmailField(source="user.email", required=False)
+    email = serializers.EmailField(required=False, allow_blank=True, source="user.email")
 
     class Meta:
         model = UserProfile
-        fields = ['profile_image', 'bio', 'phone_number', 'address', 
-                 'city', 'state', 'country', 'zipcode', 'email']
+        fields = ['email', 'profile_image', 'bio', 'phone_number', 'address', 
+                 'city', 'state', 'country', 'zipcode']
 
     def validate_profile_image(self, value):
         if value:

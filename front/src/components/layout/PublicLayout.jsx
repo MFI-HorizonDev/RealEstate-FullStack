@@ -2,11 +2,24 @@ import React from "react";
 import { Link, useLocation } from "react-router";
 import { CircleUserRound, LogOut, LayoutDashboard } from "lucide-react";
 import { logout, isUserLoggedIn, useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import UserAvatar from "@/components/UserAvatar";
 
+
 export default function PublicLayout({ children }) {
+  const auth = useContextAuth();
+  console.log("AUTH DEBUG:", auth);
   const { user, isLoggedIn, logout: handleLogout } = useAuth();
   const location = useLocation();
+  const dashboardPath = (() => {
+    if (!isLoggedIn) return "/login";
+    if (user?.is_superuser || user?.groups?.includes("SuperAdmin") || user?.groups?.includes("Super Admin")) return "/superadmin/users";
+    if (user?.groups?.includes("Admin")) return "/admin/audit-dashboard";
+    if (user?.groups?.includes("Agent")) return "/agent/dashboard";
+    if (user?.groups?.includes("Owner")) return "/owner/dashboard";
+    if (user?.groups?.includes("Buyer")) return "/buyer/dashboard";
+    return "/tours";
+  })();
 
   const navLinks = [
     { to: "/", label: "Home" },
@@ -41,7 +54,7 @@ export default function PublicLayout({ children }) {
             ))}
             {isLoggedIn && (
               <Link
-                to="/tours"
+                to={dashboardPath}
                 className="hover:text-amber-300 transition-colors flex items-center gap-1.5"
               >
                 <LayoutDashboard className="h-4 w-4" />
@@ -111,7 +124,7 @@ export default function PublicLayout({ children }) {
                 <li><Link to="/all-properties" className="hover:text-amber-300 transition-colors">Properties</Link></li>
                 <li><Link to="/places" className="hover:text-amber-300 transition-colors">Locations</Link></li>
                 {isLoggedIn && (
-                  <li><Link to="/tours" className="hover:text-amber-300 transition-colors">Dashboard</Link></li>
+                  <li><Link to={dashboardPath} className="hover:text-amber-300 transition-colors">Dashboard</Link></li>
                 )}
               </ul>
             </div>

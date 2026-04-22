@@ -41,7 +41,7 @@ class Command(BaseCommand):
         # =====================================================================
         self.stdout.write(self.style.WARNING('STEP 1: Creating groups...'))
 
-        group_names = ['SuperAdmin', 'Admin', 'Agent', 'Owner', 'Buyer']
+        group_names = ['SuperAdmin', 'Admin', 'Agent', 'Verified Agents', 'Owner', 'Buyer']
         groups = {}
 
         for group_name in group_names:
@@ -121,6 +121,9 @@ class Command(BaseCommand):
             user.is_superuser = False
             user.save()
             user.groups.add(groups['Agent'])
+            # Keep verified agents in both groups for compatibility
+            if i % 2 == 0:
+                user.groups.add(groups['Verified Agents'])
             if created:
                 self.stdout.write(f'  ✓ Created Agent: {user.username}')
 
@@ -182,7 +185,7 @@ class Command(BaseCommand):
 
         # Get all users for assignments
         owners = list(User.objects.filter(groups__name='Owner'))
-        agents = list(User.objects.filter(groups__name='Agent'))
+        agents = list(User.objects.filter(groups__name__in=['Agent', 'Verified Agents']).distinct())
         buyers = list(User.objects.filter(groups__name='Buyer'))
         all_users = list(User.objects.all())
 
@@ -325,6 +328,7 @@ class Command(BaseCommand):
             ]
         )
         groups['Agent'].permissions.set(agent_permissions)
+        groups['Verified Agents'].permissions.set(agent_permissions)
         self.stdout.write('  ✓ Agent group: Can manage properties, amenities, tours, and sales')
 
         # Owner permissions — can view/add/update their own properties and amenities

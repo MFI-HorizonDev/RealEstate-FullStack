@@ -14,6 +14,7 @@ import { useMunicipalities } from "@/services/api/useMunicipalities";
 import { useSales } from "@/services/api/useSales";
 import { useAuth } from "@/services/api/useAuth";
 
+
 const Home = () => {
   const carouselRefs = useRef([]);
   const { isLoggedIn } = useAuth();

@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { useProperties } from "@/services/api/useProperties";
 import { useSales } from "@/services/api/useSales";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ function StatusBadge({ status }) {
 
 export default function OwnerDashboard() {
   const { user, isLoggedIn } = useAuth();
+  const { isAgent, isOwner } = useContextAuth();
   const { data, isLoading: loadingProps } = useProperties({ page: 1, enabled: isLoggedIn });
   const { data: sales = [], isLoading: loadingSales } = useSales({ enabled: isLoggedIn });
 
@@ -43,11 +45,13 @@ export default function OwnerDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
           <p className="text-gray-500 mt-1">Manage your property listings and sales.</p>
         </div>
-        <Link to="/properties/create">
-          <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
-            <PlusCircle className="w-4 h-4" /> New Listing
-          </Button>
-        </Link>
+        {(isAgent || isOwner) && (
+          <Link to="/properties/create">
+            <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
+              <PlusCircle className="w-4 h-4" /> New Listing
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
@@ -87,7 +91,9 @@ export default function OwnerDashboard() {
             <div className="text-center py-12">
               <House className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 mb-4">You haven't listed any properties yet.</p>
-              <Link to="/properties/create"><Button className="bg-blue-800 text-white">Create Your First Listing</Button></Link>
+              {(isAgent || isOwner) && (
+                <Link to="/properties/create"><Button className="bg-blue-800 text-white">Create Your First Listing</Button></Link>
+              )}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
