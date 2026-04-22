@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ImagePlus, Trash2, Star, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
-const FALLBACK_IMAGE = "https://via.placeholder.com/800x600?text=No+Image+Available";
-
 /**
  * PropertyImageManager
  *
@@ -104,11 +102,6 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
   };
 
   const isWorking = uploading || uploadMutation.isPending || deleteMutation.isPending;
-  const resolveImageSrc = (src) => {
-    if (!src) return FALLBACK_IMAGE;
-    if (src.startsWith("http")) return src;
-    return `http://127.0.0.1:8000${src}`;
-  };
 
   return (
     <div className="space-y-4">
@@ -117,14 +110,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {existingImages.map((img, idx) => (
             <div key={img.id} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-video">
-              <img
-                src={resolveImageSrc(img.image)}
-                alt={`Property image ${idx + 1}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = FALLBACK_IMAGE;
-                }}
-              />
+              <img src={img.image} alt={`Property image ${idx + 1}`} className="w-full h-full object-cover" />
               {img.is_primary && (
                 <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Star className="w-2.5 h-2.5" /> Primary

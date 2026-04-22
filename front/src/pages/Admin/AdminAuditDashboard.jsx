@@ -41,6 +41,7 @@ export default function AdminAuditDashboard() {
   const approveMutation = useApproveListing(token);
   const rejectMutation = useRejectListing(token);
   const { data: roleRequests = [], isLoading: isRoleRequestsLoading } = useRoleRequests(token, "PENDING", ["Agent", "Owner"]);
+  const safeRoleRequests = Array.isArray(roleRequests) ? roleRequests : [];
   const approveRoleMutation = useApproveRoleRequest(token);
   const rejectRoleMutation = useRejectRoleRequest(token);
 
@@ -285,7 +286,7 @@ export default function AdminAuditDashboard() {
         <CardContent>
           {isRoleRequestsLoading ? (
             <p className="text-sm text-slate-500">Loading role requests...</p>
-          ) : roleRequests.length === 0 ? (
+          ) : safeRoleRequests.length === 0 ? (
             <p className="text-sm text-slate-500">No pending role requests.</p>
           ) : (
             <div className="overflow-x-auto rounded-md border border-gray-100 shadow-sm">
@@ -300,7 +301,7 @@ export default function AdminAuditDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {roleRequests.map((req) => (
+                  {safeRoleRequests.map((req) => (
                     <tr key={req.id} className="border-b hover:bg-slate-50/50 transition-colors">
                       <td className="px-4 py-3 align-middle">
                         {req.user?.first_name} {req.user?.last_name} ({req.user?.username})

@@ -35,7 +35,7 @@ class IsAgentGroup(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
             request.user.is_superuser or
-            request.user.groups.filter(name='Agent').exists() or
+            request.user.groups.filter(name__in=['Agent', 'Verified Agents']).exists() or
             request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists()
         )
 
@@ -60,7 +60,7 @@ class IsAdminOrAgent(permissions.BasePermission):
         return request.user.is_authenticated and (
             request.user.is_superuser or
             request.user.groups.filter(name='Admin').exists() or
-            request.user.groups.filter(name='Agent').exists() or
+            request.user.groups.filter(name__in=['Agent', 'Verified Agents']).exists() or
             request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists()
         )
 
@@ -78,7 +78,7 @@ class IsAdminOrAgentOrOwnerGroup(permissions.BasePermission):
         return request.user.is_authenticated and (
             request.user.is_superuser or
             request.user.groups.filter(name='Admin').exists() or
-            request.user.groups.filter(name='Agent').exists() or
+            request.user.groups.filter(name__in=['Agent', 'Verified Agents']).exists() or
             request.user.groups.filter(name='Owner').exists() or
             request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists()
         )
@@ -101,22 +101,9 @@ class IsOwnerOrAgentOrReadOnly(permissions.BasePermission):
 
         # Only owners and agents can modify (unless superuser)
         if request.method in ['PUT', 'PATCH', 'DELETE']:
-            is_admin_group = request.user.groups.filter(name__in=['Admin', 'SuperAdmin', 'Super Admin']).exists()
-            is_agent_group = request.user.groups.filter(name='Agent').exists()
-            if is_admin_group:
-                return True
-
-            if hasattr(obj, 'property'):
-                return (
-                    is_agent_group or
-                    (hasattr(obj.property, 'owner') and obj.property.owner == request.user) or
-                    (hasattr(obj.property, 'agent') and obj.property.agent == request.user)
-                )
-
             return (
                 request.user.is_superuser or
                 request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists() or
-                is_agent_group or
                 (hasattr(obj, 'owner') and obj.owner == request.user) or
                 (hasattr(obj, 'agent') and obj.agent == request.user)
             )

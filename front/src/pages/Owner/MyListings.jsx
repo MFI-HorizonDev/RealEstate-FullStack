@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiDelete } from "@/services/api/apiClient";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ const STATUS_TABS = [
 
 export default function MyListings() {
   const { user, isLoggedIn } = useAuth();
+  const { isAgent, isOwner } = useContextAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -93,11 +95,13 @@ export default function MyListings() {
           <h1 className="text-3xl font-bold text-gray-900">My Listings</h1>
           <p className="text-gray-500 mt-1">Manage all properties you've posted.</p>
         </div>
-        <Link to="/properties/create">
-          <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
-            <PlusCircle className="w-4 h-4" /> New Listing
-          </Button>
-        </Link>
+        {(isAgent || isOwner) && (
+          <Link to="/properties/create">
+            <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
+              <PlusCircle className="w-4 h-4" /> New Listing
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats */}
@@ -172,7 +176,7 @@ export default function MyListings() {
                   ? "You haven't created any listings yet."
                   : "No listings match your current filter."}
               </p>
-              {myProperties.length === 0 && (
+              {myProperties.length === 0 && (isAgent || isOwner) && (
                 <Link to="/properties/create">
                   <Button className="mt-4 bg-blue-800 text-white">Create Your First Listing</Button>
                 </Link>

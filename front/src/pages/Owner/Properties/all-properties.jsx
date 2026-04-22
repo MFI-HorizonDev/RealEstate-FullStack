@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useProperties } from "@/services/api/useProperties";
 import { useMunicipalities } from "@/services/api/useMunicipalities";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ const LISTING_TYPES = [
 export default function AllProperties() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoggedIn } = useAuth();
+  const { isAgent, isOwner, isAdmin } = useContextAuth();
   const [activeTab, setActiveTab] = useState("ACTIVE");
 
   // Filter state — initialized from URL params
@@ -40,9 +42,6 @@ export default function AllProperties() {
   const [selectedType, setSelectedType] = useState(
     searchParams.get("type") || "all"
   );
-
-  const isOwner = user?.groups?.includes("Owner");
-  const isAdmin = user?.groups?.includes("Admin") || user?.is_superuser || user?.groups?.includes("SuperAdmin") || user?.groups?.includes("Super Admin");
 
   const { data, isLoading, isError, error } = useProperties({ 
     page: 1, 
@@ -232,11 +231,13 @@ export default function AllProperties() {
                     <TabsTrigger value="REJECTED" className="px-4 text-xs font-bold">Rejected</TabsTrigger>
                   </TabsList>
                 </Tabs>
-                <Link to="/properties/create">
-                  <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 h-11 rounded-xl shadow-lg transition-transform active:scale-95 text-xs">
-                    New Listing
-                  </Button>
-                </Link>
+                {(isAgent || isOwner) && (
+                  <Link to="/properties/create">
+                    <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 h-11 rounded-xl shadow-lg transition-transform active:scale-95 text-xs">
+                      New Listing
+                    </Button>
+                  </Link>
+                )}
               </div>
             )}
           </div>

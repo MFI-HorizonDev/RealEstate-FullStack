@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router";
 import { useProperty } from "@/services/api/useProperties";
 import { useCreateTour } from "@/services/api/useTours";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ export default function PropertyDetails() {
   const { data: property, isLoading: loadingProperty, isError, error } = useProperty(id);
   const { mutateAsync: createTour, isPending: isBooking } = useCreateTour();
   const { user, isLoggedIn, isLoading: loadingAuth } = useAuth();
+  const { isAuthenticated } = useContextAuth();
   const navigate = useNavigate();
   
   const [activeImage, setActiveImage] = useState(0);
@@ -59,10 +61,13 @@ export default function PropertyDetails() {
   const images = property.images && property.images.length > 0
     ? property.images 
     : [{ image: "https://via.placeholder.com/800x600?text=No+Image+Available" }];
-  const resolveImageSrc = (src) => {
-    if (!src) return "https://via.placeholder.com/800x600?text=No+Image+Available";
-    if (src.startsWith("http")) return src;
-    return `http://127.0.0.1:8000${src}`;
+  const agentEmail = property?.agent_details?.email;
+  const contactAgent = () => {
+    if (agentEmail) {
+      window.location.href = `mailto:${agentEmail}?subject=Inquiry about ${encodeURIComponent(property.property_name || "property")}`;
+      return;
+    }
+    setBookingError("No agent contact email is available for this listing yet.");
   };
 
   const handleBookTour = async (e) => {
@@ -127,10 +132,9 @@ export default function PropertyDetails() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12 h-[50vh] min-h-[400px]">
         <div className="md:col-span-3 bg-gray-100 rounded-2xl overflow-hidden relative">
           <img 
-            src={resolveImageSrc(images[activeImage].image)} 
+            src={images[activeImage].image} 
             alt="Main property view" 
             className="w-full h-full object-cover"
-            onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x600?text=No+Image+Available"; }}
           />
         </div>
         <div className="hidden md:flex flex-col gap-4 overflow-y-auto pr-2">
@@ -142,12 +146,7 @@ export default function PropertyDetails() {
                 activeImage === idx ? "border-blue-600 ring-2 ring-blue-600/30" : "border-transparent opacity-70 hover:opacity-100"
               }`}
             >
-              <img
-                src={resolveImageSrc(img.image)}
-                className="w-full h-full object-cover"
-                alt={`Thumbnail ${idx + 1}`}
-                onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/800x600?text=No+Image+Available"; }}
-              />
+              <img src={img.image} className="w-full h-full object-cover" alt={`Thumbnail ${idx + 1}`} />
             </button>
           ))}
         </div>
@@ -287,13 +286,21 @@ export default function PropertyDetails() {
 
             {!showBookingForm ? (
               <div className="space-y-4">
-                {(user?.groups?.includes("Buyer") || !isLoggedIn) && (
+                {isAuthenticated ? (
                   <Button 
-                    onClick={() => isLoggedIn ? setShowBookingForm(true) : window.location.href = "/login"}
+                    onClick={() => setShowBookingForm(true)}
                     className="w-full bg-blue-800 hover:bg-blue-900 text-white h-12 text-lg font-semibold rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <CalendarCheck className="w-5 h-5" />
                     Book a Tour
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => (window.location.href = "/login")}
+                    className="w-full bg-blue-800 hover:bg-blue-900 text-white h-12 text-lg font-semibold rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  >
+                    <CalendarCheck className="w-5 h-5" />
+                    Login to Book
                   </Button>
                 )}
 
@@ -360,7 +367,11 @@ export default function PropertyDetails() {
               </div>
             )}
             
-            <Button variant="outline" className="w-full h-12 text-blue-800 border-blue-200 hover:bg-blue-50 font-semibold rounded-xl transition-all">
+            <Button
+              variant="outline"
+              onClick={contactAgent}
+              className="w-full h-12 text-blue-800 border-blue-200 hover:bg-blue-50 font-semibold rounded-xl transition-all"
+            >
               Contact Agent
             </Button>
 

@@ -131,32 +131,11 @@ export default function Signup() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium text-gray-900">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="h-11 bg-gray-50 pr-10 focus:border-blue-800 focus:ring-blue-800/20"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
-                  </div>
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-11 bg-gray-50 focus:border-blue-800 focus:ring-blue-800/20" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="passwordconfirm" className="text-sm font-medium text-gray-900">Confirm</Label>
-                  <Input
-                    id="passwordconfirm"
-                    type={showPassword ? "text" : "password"}
-                    value={passwordConfirm}
-                    onChange={(e) => setPasswordConfirm(e.target.value)}
-                    className="h-11 bg-gray-50 focus:border-blue-800 focus:ring-blue-800/20"
-                  />
+                  <Input id="passwordconfirm" type="password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} className="h-11 bg-gray-50 focus:border-blue-800 focus:ring-blue-800/20" />
                 </div>
               </div>
 
