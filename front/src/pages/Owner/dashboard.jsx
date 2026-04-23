@@ -11,6 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, DollarSign, PlusCircle, TrendingUp, House, MapPin } from "lucide-react";
 
 const peso = (v) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(Number(v || 0));
+const IMAGE_PLACEHOLDER = "https://via.placeholder.com/800x600?text=No+Image+Available";
+
+function resolveImageSrc(imageValue) {
+  if (typeof imageValue !== "string" || !imageValue.trim()) return IMAGE_PLACEHOLDER;
+  if (imageValue.startsWith("http")) return imageValue;
+  if (imageValue.startsWith("/")) return `http://127.0.0.1:8000${imageValue}`;
+  return imageValue;
+}
 
 function StatusBadge({ status }) {
   const colors = {
@@ -102,7 +110,7 @@ export default function OwnerDashboard() {
                 <Card className="hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
                   <div className="h-36 bg-gray-100 overflow-hidden">
                     {p.images?.length > 0
-                      ? <img src={p.images[0].image} alt={p.property_name} className="w-full h-full object-cover" />
+                      ? <img src={resolveImageSrc(p.images?.[0]?.image)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMAGE_PLACEHOLDER; }} alt={p.property_name} className="w-full h-full object-cover" />
                       : <div className="w-full h-full flex items-center justify-center"><House className="w-8 h-8 text-gray-300" /></div>}
                   </div>
                   <CardContent className="p-4 space-y-2">

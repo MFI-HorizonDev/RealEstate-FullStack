@@ -38,7 +38,7 @@ class TourListCreateView(generics.ListCreateAPIView):
         if prop and not prop.is_available_for_tour:
             raise PermissionDenied("This property is not available for tours.")
 
-        agent = prop.agent if prop else None
+        agent = (prop.agent or getattr(prop, "owner", None)) if prop else None
         serializer.save(
             buyer=self.request.user,
             agent=agent,

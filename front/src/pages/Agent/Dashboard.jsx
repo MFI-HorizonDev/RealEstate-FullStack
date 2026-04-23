@@ -135,9 +135,11 @@ export default function AgentDashboard() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <House className="w-10 h-10" />
-                    </div>
+                    <img
+                      src="https://via.placeholder.com/800x600?text=No+Image+Available"
+                      alt="No image available"
+                      className="w-full h-full object-cover"
+                    />
                   )}
                 </div>
                 <CardContent className="pt-4 space-y-3">

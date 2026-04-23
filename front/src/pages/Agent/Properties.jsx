@@ -44,7 +44,7 @@ export default function AgentProperties() {
                   <div className="h-40 bg-gray-100 overflow-hidden">
                     {p.images?.length > 0
                       ? <img src={p.images[0].image} alt={p.property_name} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center"><House className="w-8 h-8 text-gray-300" /></div>}
+                      : <img src="https://via.placeholder.com/800x600?text=No+Image+Available" alt="No image available" className="w-full h-full object-cover" />}
                   </div>
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">

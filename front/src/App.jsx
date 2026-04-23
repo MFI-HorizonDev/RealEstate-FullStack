@@ -254,9 +254,11 @@ export default function App() {
                         />
                       ))
                     ) : (
-                      <div className="flex-shrink-0 w-full h-full bg-gray-300 flex items-center justify-center snap-center">
-                        <p className="text-gray-500 font-medium">No image available</p>
-                      </div>
+                      <img
+                        src="https://via.placeholder.com/1200x800?text=No+Image+Available"
+                        className="flex-shrink-0 w-full h-full object-cover snap-center"
+                        alt="No image available"
+                      />
                     )}
                   </div>
                   

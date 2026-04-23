@@ -5,6 +5,7 @@ from .models import *
 from .serializers import *
 from core.permissions import *
 from .pricing import PricingEngine
+from .tasks import update_all_market_buffers
 from .throttles import VerifiedAgentThrottle, UnverifiedAgentThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView

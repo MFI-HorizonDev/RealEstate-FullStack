@@ -25,11 +25,19 @@ const LISTING_TYPES = [
   { value: "LEASE", label: "For Lease" },
   { value: "FORECLOSURE", label: "Foreclosure" },
 ];
+const IMAGE_PLACEHOLDER = "https://via.placeholder.com/800x600?text=No+Image+Available";
+
+function resolveImageSrc(imageValue) {
+  if (typeof imageValue !== "string" || !imageValue.trim()) return IMAGE_PLACEHOLDER;
+  if (imageValue.startsWith("http")) return imageValue;
+  if (imageValue.startsWith("/")) return `http://127.0.0.1:8000${imageValue}`;
+  return imageValue;
+}
 
 export default function AllProperties() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoggedIn } = useAuth();
-  const { isAgent, isOwner, isAdmin } = useContextAuth();
+  const { isAgent, isOwner, isAdmin, isAuthLoading } = useContextAuth();
   const [activeTab, setActiveTab] = useState("ACTIVE");
 
   // Filter state — initialized from URL params
@@ -46,7 +54,7 @@ export default function AllProperties() {
   const { data, isLoading, isError, error } = useProperties({ 
     page: 1, 
     enabled: true,
-    status: (isOwner || isAdmin) ? activeTab : "ACTIVE"
+    status: (isOwner || isAdmin || isAgent) ? activeTab : "ACTIVE"
   });
   const { data: municipalities = [] } = useMunicipalities({ enabled: true });
 
@@ -222,7 +230,7 @@ export default function AllProperties() {
               </p>
             </div>
             
-            {(isOwner || isAdmin || isAgent) && (
+            {!isAuthLoading && (isOwner || isAdmin || isAgent) && (
               <div className="flex items-center gap-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-gray-100 p-1 rounded-lg">
                   <TabsList className="bg-transparent h-9">
@@ -274,7 +282,9 @@ export default function AllProperties() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filtered.map((property) => {
               const imgIdx = imgIndexes[property.id] || 0;
-              const hasImages = property.images && property.images.length > 0;
+              const hasImages =
+                Array.isArray(property.images) &&
+                property.images.some((img) => typeof img?.image === "string" && img.image.trim());
               const listingLabel = LISTING_TYPES.find(t => t.value === property.type)?.label || property.type;
 
               return (
@@ -283,7 +293,11 @@ export default function AllProperties() {
                     <div className="relative h-60 bg-gray-100 overflow-hidden">
                       {hasImages ? (
                         <img
-                          src={property.images[imgIdx].image}
+                          src={resolveImageSrc(property.images?.[imgIdx]?.image)}
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = IMAGE_PLACEHOLDER;
+                          }}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           alt={property.property_name}
                         />

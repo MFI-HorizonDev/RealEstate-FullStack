@@ -165,9 +165,11 @@ const Home = () => {
                         alt={property.property_name}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500">
-                        No image available
-                      </div>
+                      <img
+                        src="https://via.placeholder.com/800x600?text=No+Image+Available"
+                        className="w-full h-full object-cover"
+                        alt="No image available"
+                      />
                     )}
                   </div>
                 </div>

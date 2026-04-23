@@ -66,7 +66,13 @@ export let routes = createBrowserRouter([
   },
   {
     path: "properties/create",
-    element: <PublicLayout><ProtectedRoute allow={(auth) => auth.isAgent || auth.isOwner || auth.isAdmin}><PropertyCreate /></ProtectedRoute></PublicLayout>,
+    element: (
+      <PublicLayout>
+        <ProtectedRoute allow={(auth) => auth.isAgent || auth.isOwner || auth.isAdmin} redirectTo="/">
+          <PropertyCreate />
+        </ProtectedRoute>
+      </PublicLayout>
+    ),
   },
   {
     path: "properties/:id",

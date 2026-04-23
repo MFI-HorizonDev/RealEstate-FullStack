@@ -21,6 +21,7 @@ import {
   useRejectRoleRequest,
   useRejectListing,
   useRoleRequests,
+  useTriggerMarketUpdate,
 } from "@/services/api/adminAuditHooks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -44,6 +45,7 @@ export default function AdminAuditDashboard() {
   const safeRoleRequests = Array.isArray(roleRequests) ? roleRequests : [];
   const approveRoleMutation = useApproveRoleRequest(token);
   const rejectRoleMutation = useRejectRoleRequest(token);
+  const triggerMarketMutation = useTriggerMarketUpdate(token);
 
   const handleApprove = useCallback((id, name) => {
     const toastId = toast.loading(`Approving ${name}...`);
@@ -364,6 +366,32 @@ export default function AdminAuditDashboard() {
               </table>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Trigger Market Update</CardTitle>
+          <CardDescription>
+            Recompute municipality market buffers so valuation previews use latest sale trends.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-between gap-4">
+          <p className="text-sm text-slate-600">
+            Run this after adding/updating sale records to demonstrate dynamic pricing changes.
+          </p>
+          <Button
+            onClick={() =>
+              triggerMarketMutation.mutate(undefined, {
+                onSuccess: (res) => toast.success(res?.detail || "Market update complete."),
+                onError: (err) => toast.error(err?.message || "Failed to trigger market update."),
+              })
+            }
+            disabled={triggerMarketMutation.isPending}
+            className="bg-blue-700 hover:bg-blue-800 text-white"
+          >
+            {triggerMarketMutation.isPending ? "Running..." : "Run Market Update"}
+          </Button>
         </CardContent>
       </Card>
     </div>

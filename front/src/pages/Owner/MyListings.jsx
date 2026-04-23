@@ -18,6 +18,14 @@ import { toast } from "sonner";
 
 const peso = (v) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(Number(v || 0));
+const IMAGE_PLACEHOLDER = "https://via.placeholder.com/800x600?text=No+Image+Available";
+
+function resolveImageSrc(imageValue) {
+  if (typeof imageValue !== "string" || !imageValue.trim()) return IMAGE_PLACEHOLDER;
+  if (imageValue.startsWith("http")) return imageValue;
+  if (imageValue.startsWith("/")) return `http://127.0.0.1:8000${imageValue}`;
+  return imageValue;
+}
 
 const STATUS_COLORS = {
   ACTIVE:       "bg-green-100 text-green-800 border-green-200",
@@ -194,7 +202,7 @@ export default function MyListings() {
                 {/* Thumbnail */}
                 <div className="w-full sm:w-32 h-24 sm:h-auto rounded-lg overflow-hidden bg-gray-100 shrink-0">
                   {p.images?.length > 0 ? (
-                    <img src={p.images[0].image} alt={p.property_name} className="w-full h-full object-cover" />
+                    <img src={resolveImageSrc(p.images?.[0]?.image)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMAGE_PLACEHOLDER; }} alt={p.property_name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <House className="w-8 h-8 text-gray-300" />

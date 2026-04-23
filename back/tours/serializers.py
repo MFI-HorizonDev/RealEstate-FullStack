@@ -1,5 +1,3 @@
-from datetime import timedelta
-
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -7,16 +5,14 @@ from listings.models import Property
 from .models import Tour
 
 
-def agent_has_scheduled_conflict(agent, tour_datetime, exclude_tour_pk=None):
+def agent_has_daily_conflict(agent, tour_datetime, exclude_tour_pk=None):
     if agent is None or tour_datetime is None:
         return False
-    window_start = tour_datetime - timedelta(hours=1)
-    window_end = tour_datetime + timedelta(hours=1)
+
     qs = Tour.objects.filter(
         agent=agent,
-        status=Tour.STATUS_SCHEDULED,
-        tour_datetime__gte=window_start,
-        tour_datetime__lte=window_end,
+        status__in=[Tour.STATUS_QUEUED, Tour.STATUS_SCHEDULED],
+        tour_datetime__date=tour_datetime.date(),
     )
     if exclude_tour_pk is not None:
         qs = qs.exclude(pk=exclude_tour_pk)
@@ -92,15 +88,15 @@ class TourSerializer(serializers.ModelSerializer):
         if prop is None or tour_datetime is None:
             return attrs
 
-        agent = prop.agent
+        agent = prop.agent or getattr(prop, "owner", None)
         if agent is None:
             raise serializers.ValidationError(
-                {"property": "This property has no assigned agent for tours."}
+                {"property": "This property has no assigned tour handler."}
             )
 
-        if agent_has_scheduled_conflict(agent, tour_datetime):
+        if agent_has_daily_conflict(agent, tour_datetime):
             raise serializers.ValidationError(
-                "The agent is already booked for this time block."
+                "This agent already has a tour on this date."
             )
 
         return attrs
@@ -130,9 +126,9 @@ class TourAgentActionSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "Tour has no agent assigned; cannot schedule."
                 )
-            if agent_has_scheduled_conflict(agent, dt, exclude_tour_pk=self.instance.pk):
+            if agent_has_daily_conflict(agent, dt, exclude_tour_pk=self.instance.pk):
                 raise serializers.ValidationError(
-                    "The agent is already booked for this time block."
+                    "This agent already has a tour on this date."
                 )
 
         return attrs
@@ -157,8 +153,8 @@ class TourManageSerializer(serializers.ModelSerializer):
         if status not in allowed_status:
             raise serializers.ValidationError({"status": "Invalid status."})
 
-        if dt and status == Tour.STATUS_SCHEDULED:
-            if agent_has_scheduled_conflict(self.instance.agent, dt, exclude_tour_pk=self.instance.pk):
-                raise serializers.ValidationError("The agent is already booked for this time block.")
+        if dt and status in {Tour.STATUS_QUEUED, Tour.STATUS_SCHEDULED}:
+            if agent_has_daily_conflict(self.instance.agent, dt, exclude_tour_pk=self.instance.pk):
+                raise serializers.ValidationError("This agent already has a tour on this date.")
 
         return attrs

@@ -28,11 +28,14 @@ export function AuthProvider({ children }) {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [accessToken, setAccessToken] = useState(() => normalizeToken(localStorage.getItem("access")));
 
-  // Keep accessToken in sync if localStorage changes (login/logout from another tab or effect)
   useEffect(() => {
-    const onStorage = () => setAccessToken(normalizeToken(localStorage.getItem("access")));
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    const refreshAuth = () => setAccessToken(normalizeToken(localStorage.getItem("access")));
+    window.addEventListener("storage", refreshAuth);
+    window.addEventListener("auth-changed", refreshAuth);
+    return () => {
+      window.removeEventListener("storage", refreshAuth);
+      window.removeEventListener("auth-changed", refreshAuth);
+    };
   }, []);
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPatch } from "./apiClient";
+import { apiGet, apiPatch, apiPost } from "./apiClient";
 
 const toList = (payload) => {
   if (Array.isArray(payload)) return payload;
@@ -114,6 +114,16 @@ export function useRejectRoleRequest(token) {
       apiPatch(`/admin/role-requests/${profileId}/action/`, { action: "reject" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["role-requests"] });
+    },
+  });
+}
+
+export function useTriggerMarketUpdate(token) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => apiPost("/admin/trigger-market-update/", {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["flagged-listings"] });
     },
   });
 }

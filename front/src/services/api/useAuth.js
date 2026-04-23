@@ -50,6 +50,7 @@ export const useLogin = () => {
     onSuccess: (data) => {
       localStorage.setItem("access", data.access);
       localStorage.setItem("refresh", data.refresh);
+      window.dispatchEvent(new Event("auth-changed"));
       queryClient.invalidateQueries({ queryKey: ["user"] });
     },
   });
@@ -118,6 +119,7 @@ export const useSignup = () => {
 export const logout = () => {
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
+  window.dispatchEvent(new Event("auth-changed"));
 };
 
 // Check if user is logged in
