@@ -8,37 +8,28 @@ def is_verified_creator(user):
 
 
 class VerifiedAgentThrottle(UserRateThrottle):
+    scope = "verified_creator"
     rate = "1/5m"
 
     def allow_request(self, request, view):
         if request.method != "POST":
             return True
-
-        user = request.user
-        if not user or not user.is_authenticated:
+        if not request.user or not request.user.is_authenticated:
             return True
-
-        is_verified = is_verified_creator(user)
-        if not is_verified:
-            return True
-
+        if not is_verified_creator(request.user):
+            return True  # not their throttle — let UnverifiedAgentThrottle handle
         return super().allow_request(request, view)
 
 
 class UnverifiedAgentThrottle(UserRateThrottle):
+    scope = "unverified_creator"
     rate = "1/30m"
 
     def allow_request(self, request, view):
         if request.method != "POST":
             return True
-
-        user = request.user
-        if not user or not user.is_authenticated:
+        if not request.user or not request.user.is_authenticated:
             return True
-
-        is_verified = is_verified_creator(user)
-        if is_verified:
-            return True
-
+        if is_verified_creator(request.user):
+            return True  # not their throttle — let VerifiedAgentThrottle handle
         return super().allow_request(request, view)
-

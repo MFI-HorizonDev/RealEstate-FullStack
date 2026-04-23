@@ -27,7 +27,7 @@ export default function Login() {
       await loginMutation.mutateAsync({ email, password });
       setLogin(true);
       setTimeout(() => {
-        navigate("/", { replace: true });
+        window.location.href = "/";
       }, 1000);
     } catch (err) {
       setLogin(false);

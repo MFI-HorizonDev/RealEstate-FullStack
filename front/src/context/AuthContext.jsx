@@ -25,8 +25,15 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [groups, setGroups] = useState([]);
   const [isMeValid, setIsMeValid] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState(() => normalizeToken(localStorage.getItem("access")));
 
-  const accessToken = normalizeToken(localStorage.getItem("access"));
+  // Keep accessToken in sync if localStorage changes (login/logout from another tab or effect)
+  useEffect(() => {
+    const onStorage = () => setAccessToken(normalizeToken(localStorage.getItem("access")));
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,6 +44,7 @@ export function AuthProvider({ children }) {
           setUser(null);
           setGroups([]);
           setIsMeValid(false);
+          setIsAuthLoading(false);
         }
         return;
       }
@@ -55,6 +63,7 @@ export function AuthProvider({ children }) {
           setGroups(fetchedGroups);
           console.log("Context updated:", { user: data, groups: fetchedGroups });
           setIsMeValid(true);
+          setIsAuthLoading(false);
           return;
         }
 
@@ -63,12 +72,14 @@ export function AuthProvider({ children }) {
         setUser(null);
         setGroups([]);
         setIsMeValid(false);
+        setIsAuthLoading(false);
       } catch (err) {
         if (!isMounted) return;
         console.error("AUTH fetch threw:", err);
         setUser(null);
         setGroups([]);
         setIsMeValid(false);
+        setIsAuthLoading(false);
       }
     };
 
@@ -85,14 +96,15 @@ export function AuthProvider({ children }) {
     return {
       user,
       groups,
+      isAuthLoading,
       isAuthenticated,
-      isAdmin: user?.is_superuser === true,
+      isAdmin: user?.is_superuser === true || user?.is_staff === true || groups.includes("Admin") || groups.includes("SuperAdmin"),
       isAgent: groups.includes("Agent"),
       isVerifiedAgent: groups.includes("Verified Agents"),
       isOwner: groups.includes("Owner"),
       isBuyer: groups.includes("Buyer"),
     };
-  }, [accessToken, isMeValid, user, groups]);
+  }, [accessToken, isMeValid, isAuthLoading, user, groups]);
 
   return <AuthContext.Provider value={authValue}>{children}</AuthContext.Provider>;
 }

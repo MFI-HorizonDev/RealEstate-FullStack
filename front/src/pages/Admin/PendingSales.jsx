@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiPatch } from "@/services/api/apiClient";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +14,16 @@ const peso = (v) => new Intl.NumberFormat("en-PH", { style: "currency", currency
 
 export default function PendingSales() {
   const { isLoggedIn } = useAuth();
+  const { isAdmin } = useContextAuth();
   const queryClient = useQueryClient();
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        <p className="text-red-600 text-sm">Pending sale requests are visible to admins only.</p>
+      </div>
+    );
+  }
 
   const { data: requests = [], isLoading, isError } = useQuery({
     queryKey: ["pending-sales"],

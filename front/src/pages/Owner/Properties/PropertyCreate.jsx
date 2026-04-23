@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useCreateProperty } from "@/services/api/useProperties";
 import { useMunicipalities } from "@/services/api/useMunicipalities";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ const emptyAmenity = () => ({ name: "", amenity_type: "Basic", price: "" });
 export default function PropertyCreate() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin, isAgent, isOwner } = useContextAuth();
   const { mutateAsync: createProperty, isPending } = useCreateProperty();
   const { data: municipalities = [] } = useMunicipalities();
   const imageManagerRef = useRef(null);
@@ -328,6 +330,7 @@ export default function PropertyCreate() {
         </Card>
 
         {/* ── 4. Amenities ── */}
+        {(isAgent || isOwner || isAdmin) && (
         <Card className="border-gray-200 shadow-sm overflow-hidden">
           <CardHeader className="bg-gray-50/50 border-b border-gray-100">
             <div className="flex items-center gap-2"><Sofa className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Amenities</CardTitle></div>
@@ -379,10 +382,12 @@ export default function PropertyCreate() {
                         className="h-9 text-sm" />
                     </div>
                     <div className="col-span-1 flex justify-center">
-                      <button type="button" onClick={() => removeAmenity(idx)}
-                        className="text-red-400 hover:text-red-600 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {isAdmin && (
+                        <button type="button" onClick={() => removeAmenity(idx)}
+                          className="text-red-400 hover:text-red-600 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -395,8 +400,10 @@ export default function PropertyCreate() {
             </Button>
           </CardContent>
         </Card>
+        )}
 
         {/* ── 5. Photos ── */}
+        {(isAgent || isOwner || isAdmin) && (
         <Card className="border-gray-200 shadow-sm overflow-hidden">
           <CardHeader className="bg-gray-50/50 border-b border-gray-100">
             <div className="flex items-center gap-2"><ImagePlus className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Property Photos</CardTitle></div>
@@ -406,10 +413,11 @@ export default function PropertyCreate() {
             <PropertyImageManager ref={imageManagerRef} mode="preview" />
           </CardContent>
         </Card>
+        )}
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => navigate(-1)} className="h-12 px-8">Cancel</Button>
-          <Button type="submit" disabled={isPending}
+          <Button type="submit" disabled={isPending || !(isAgent || isOwner || isAdmin)}
             className="h-12 px-12 bg-blue-800 hover:bg-blue-900 text-white font-bold text-lg rounded-xl shadow-lg transition-all active:scale-95">
             {isPending ? "Creating..." : "Create Listing"}
           </Button>

@@ -31,12 +31,12 @@ class PropertyListView(generics.ListAPIView):
             queryset = queryset.filter(status=status_param)
         return queryset
 
-# Create new property
+# Create new property (agent/owner/admin only)
 class PropertyCreateView(generics.CreateAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertyCreateSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerGroup]
+    permission_classes = [IsAdminOrAgentOrOwnerGroup]
     throttle_classes = [VerifiedAgentThrottle, UnverifiedAgentThrottle]
 
     def perform_create(self, serializer):
@@ -56,12 +56,12 @@ class PropertyUpdateView(generics.UpdateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
 
-# Delete property
+# Delete property (admin only)
 class PropertyDeleteView(generics.DestroyAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsAdminGroup]
 
 # Admin-only: approve or reject a flagged listing by updating its status
 class AdminPropertyStatusView(APIView):
@@ -124,11 +124,12 @@ class PropertyImageUpdateView(generics.UpdateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
 
+# Delete property image (admin only)
 class PropertyImageDeleteView(generics.DestroyAPIView):
     queryset = PropertyImage.objects.all()
     serializer_class = PropertyImageSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsAdminGroup]
 
 # List all municipalities
 class MunicipalityListView(generics.ListAPIView):
@@ -176,11 +177,11 @@ class AmenityListView(generics.ListAPIView):
             return Amenity.objects.filter(property_id=self.kwargs['property_id'])
         return Amenity.objects.all()
 
-# Create amenity for a property
+# Create amenity for a property (agent/owner/admin only)
 class AmenityCreateView(generics.CreateAPIView):
     serializer_class = AmenitySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAdminOrAgentOrOwnerGroup]
 
     def perform_create(self, serializer):
         if 'property_id' in self.kwargs:
@@ -215,12 +216,12 @@ class AmenityUpdateView(generics.UpdateAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
 
-# Delete amenity
+# Delete amenity (admin only)
 class AmenityDeleteView(generics.DestroyAPIView):
     queryset = Amenity.objects.all()
     serializer_class = AmenitySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsAdminGroup]
 
 class ValuationPreviewView(generics.RetrieveAPIView):
     queryset = Property.objects.all()

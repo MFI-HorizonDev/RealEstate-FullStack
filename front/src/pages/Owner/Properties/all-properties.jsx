@@ -222,7 +222,7 @@ export default function AllProperties() {
               </p>
             </div>
             
-            {(isOwner || isAdmin) && (
+            {(isOwner || isAdmin || isAgent) && (
               <div className="flex items-center gap-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-gray-100 p-1 rounded-lg">
                   <TabsList className="bg-transparent h-9">
@@ -231,7 +231,7 @@ export default function AllProperties() {
                     <TabsTrigger value="REJECTED" className="px-4 text-xs font-bold">Rejected</TabsTrigger>
                   </TabsList>
                 </Tabs>
-                {(isAgent || isOwner) && (
+                {(isAgent || isOwner || isAdmin) && (
                   <Link to="/properties/create">
                     <Button className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-6 h-11 rounded-xl shadow-lg transition-transform active:scale-95 text-xs">
                       New Listing

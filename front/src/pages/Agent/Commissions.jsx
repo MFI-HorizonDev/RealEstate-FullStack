@@ -2,6 +2,7 @@ import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/services/api/apiClient";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ const peso = (v) => new Intl.NumberFormat("en-PH", { style: "currency", currency
 
 export default function AgentCommissions() {
   const { isLoggedIn } = useAuth();
+  const { isAdmin } = useContextAuth();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["commissions"],
     queryFn: () => apiGet("/commissions/"),
@@ -20,6 +22,14 @@ export default function AgentCommissions() {
   const commissions = Array.isArray(data) ? data : data?.results ?? [];
   const totalEarned = commissions.filter(c => c.is_paid).reduce((s, c) => s + Number(c.amount_calculated || 0), 0);
   const totalPending = commissions.filter(c => !c.is_paid).reduce((s, c) => s + Number(c.amount_calculated || 0), 0);
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-5xl mx-auto py-8 px-4">
+        <p className="text-red-600 text-sm">Commissions are visible to admins only.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4">
