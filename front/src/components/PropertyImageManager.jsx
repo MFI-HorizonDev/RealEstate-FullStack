@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { useUploadPropertyImages, useDeletePropertyImage } from "@/services/api/useProperties";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, Trash2, Star, Upload, X } from "lucide-react";
 import { toast } from "sonner";
@@ -24,6 +25,8 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
   { mode = "preview", propertyId, existingImages = [], onFilesChange },
   ref
 ) {
+  const { isAdmin, isAgent, isOwner } = useAuth();
+  const canManageImages = isAdmin || isAgent || isOwner;
   const fileInputRef = useRef(null);
   const [localFiles, setLocalFiles] = useState([]); // { file, previewUrl }
   const [uploading, setUploading] = useState(false);
@@ -94,6 +97,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
 
   // ── Delete existing image (mode="manage") ────────────────────────────────
   const deleteExisting = (imageId, imageName) => {
+    if (!isAdmin) return;
     if (!confirm(`Delete this image?`)) return;
     deleteMutation.mutate(imageId, {
       onSuccess: () => toast.success("Image deleted."),
@@ -116,14 +120,16 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
                   <Star className="w-2.5 h-2.5" /> Primary
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => deleteExisting(img.id)}
-                disabled={isWorking}
-                className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => deleteExisting(img.id)}
+                  disabled={isWorking}
+                  className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -161,7 +167,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
         </div>
       )}
 
-      {mode === "preview" && localFiles.length === 0 && (
+      {canManageImages && mode === "preview" && localFiles.length === 0 && (
         <div
           onClick={() => fileInputRef.current?.click()}
           className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-blue-200 rounded-xl bg-blue-50/30 text-blue-700 cursor-pointer hover:bg-blue-50 transition-colors"
@@ -173,25 +179,27 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
       )}
 
       {/* ── Add more button ── */}
-      <div className="flex items-center gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isWorking}
-          className="gap-2 border-blue-200 text-blue-800 hover:bg-blue-50"
-        >
-          {isWorking ? (
-            <><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Uploading...</>
-          ) : (
-            <><Upload className="w-4 h-4" /> {mode === "preview" ? "Add Photos" : "Upload More"}</>
+      {canManageImages && (
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isWorking}
+            className="gap-2 border-blue-200 text-blue-800 hover:bg-blue-50"
+          >
+            {isWorking ? (
+              <><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Uploading...</>
+            ) : (
+              <><Upload className="w-4 h-4" /> {mode === "preview" ? "Add Photos" : "Upload More"}</>
+            )}
+          </Button>
+          {mode === "preview" && localFiles.length > 0 && (
+            <p className="text-xs text-gray-500">{localFiles.length} photo{localFiles.length !== 1 ? "s" : ""} selected · will upload after saving</p>
           )}
-        </Button>
-        {mode === "preview" && localFiles.length > 0 && (
-          <p className="text-xs text-gray-500">{localFiles.length} photo{localFiles.length !== 1 ? "s" : ""} selected · will upload after saving</p>
-        )}
-      </div>
+        </div>
+      )}
 
       <input
         ref={fileInputRef}

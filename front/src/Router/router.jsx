@@ -48,9 +48,9 @@ import MyListings from "../pages/Owner/MyListings";
 import BuyerDashboard from "../pages/Customer/BuyerDashboard";
 
 // ── Helper: wrap in DashboardLayout + ProtectedRoute ──────────────────────────
-const dash = (element, requiredRole = null) => (
+const dash = (element, requiredRole = null, allow = null) => (
   <DashboardLayout>
-    <ProtectedRoute requiredRole={requiredRole}>
+    <ProtectedRoute requiredRole={requiredRole} allow={allow}>
       {element}
     </ProtectedRoute>
   </DashboardLayout>
@@ -66,7 +66,7 @@ export let routes = createBrowserRouter([
   },
   {
     path: "properties/create",
-    element: <PublicLayout><ProtectedRoute requiredRole="Owner"><PropertyCreate /></ProtectedRoute></PublicLayout>,
+    element: <PublicLayout><ProtectedRoute allow={(auth) => auth.isAgent || auth.isOwner || auth.isAdmin}><PropertyCreate /></ProtectedRoute></PublicLayout>,
   },
   {
     path: "properties/:id",
@@ -105,7 +105,7 @@ export let routes = createBrowserRouter([
   { path: "admin/market-update",   element: dash(<MarketUpdate />,         "Admin") },
 
   // ── Dashboard: Agent ─────────────────────────────────────────────────────────
-  { path: "agent/dashboard",   element: dash(<AgentDashboard />,   "Agent") },
+  { path: "agent/dashboard",   element: dash(<AgentDashboard />,   null, (auth) => auth.isAgent || auth.isOwner || auth.isAdmin) },
   {
     path: "dashboard/agent",
     element: (
@@ -116,16 +116,16 @@ export let routes = createBrowserRouter([
       </DashboardLayout>
     ),
   },
-  { path: "agent/properties",  element: dash(<AgentProperties />,  "Agent") },
-  { path: "agent/commissions", element: dash(<AgentCommissions />, "Agent") },
+  { path: "agent/properties",  element: dash(<AgentProperties />,  null, (auth) => auth.isAgent || auth.isOwner || auth.isAdmin) },
+  { path: "agent/commissions", element: dash(<AgentCommissions />, null, (auth) => auth.isAdmin) },
 
   // ── Dashboard: SuperAdmin ─────────────────────────────────────────────────────
   { path: "superadmin/users",      element: dash(<ManageUsers />) },
   { path: "superadmin/properties", element: dash(<ManageProperties />) },
 
   // ── Dashboard: Owner ─────────────────────────────────────────────────────────
-  { path: "owner/dashboard",  element: dash(<OwnerDashboard />, "Owner") },
-  { path: "owner/listings",   element: dash(<MyListings />,     "Owner") },
+  { path: "owner/dashboard",  element: dash(<OwnerDashboard />, null, (auth) => auth.isOwner || auth.isAgent || auth.isAdmin) },
+  { path: "owner/listings",   element: dash(<MyListings />,     null, (auth) => auth.isOwner || auth.isAgent || auth.isAdmin) },
 
   // ── Dashboard: Buyer ─────────────────────────────────────────────────────────
   { path: "buyer/dashboard", element: dash(<BuyerDashboard />, "Buyer") },

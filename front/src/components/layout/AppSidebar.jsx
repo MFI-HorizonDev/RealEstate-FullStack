@@ -34,7 +34,7 @@ import { useAuth as useContextAuth } from "@/context/AuthContext";
 export function AppSidebar() {
   const location = useLocation();
   const { user } = useAuth();
-  const { isAgent: canCreateAsAgent, isOwner: canCreateAsOwner } = useContextAuth();
+  const { isAdmin: canAdminFromContext, isAgent: canCreateAsAgent, isOwner: canCreateAsOwner } = useContextAuth();
 
   const handleLogout = () => {
     logout();
@@ -62,13 +62,13 @@ export function AppSidebar() {
   const agentItems = isAgent ? [
     { title: "Agent Dashboard",     url: "/agent/dashboard",        icon: LayoutDashboard },
     { title: "My Tours",            url: "/tours",                  icon: CalendarDays },
-    { title: "My Commissions",      url: "/agent/commissions",      icon: DollarSign },
+    ...(canAdminFromContext ? [{ title: "My Commissions", url: "/agent/commissions", icon: DollarSign }] : []),
   ] : [];
 
   const ownerItems = isOwner ? [
     { title: "Owner Dashboard",     url: "/owner/dashboard",        icon: LayoutDashboard },
     { title: "My Listings",         url: "/owner/listings",         icon: Building2 },
-    ...(canCreateAsAgent || canCreateAsOwner ? [{ title: "Create Listing", url: "/properties/create", icon: PlusCircle }] : []),
+    ...(canCreateAsAgent || canCreateAsOwner || canAdminFromContext ? [{ title: "Create Listing", url: "/properties/create", icon: PlusCircle }] : []),
     { title: "My Sales",            url: "/bookings",               icon: DollarSign },
   ] : [];
 

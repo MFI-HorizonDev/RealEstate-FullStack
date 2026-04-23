@@ -47,6 +47,15 @@ class IsOwnerGroup(permissions.BasePermission):
             request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists()
         )
 
+class IsOwnerOrAdminGroup(permissions.BasePermission):
+    """Owner or Admin can create listings. Agents cannot."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and (
+            request.user.is_superuser or
+            request.user.is_staff or
+            request.user.groups.filter(name__in=['Owner', 'Admin', 'SuperAdmin', 'Super Admin']).exists()
+        )
+
 class IsBuyerGroup(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and (

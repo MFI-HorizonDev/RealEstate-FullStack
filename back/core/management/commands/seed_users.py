@@ -323,13 +323,13 @@ class Command(BaseCommand):
                 'view_property', 'add_property', 'change_property',
                 'view_amenity', 'add_amenity', 'change_amenity',
                 'view_propertyimage', 'add_propertyimage',
-                'view_tour', 'add_tour', 'change_tour',
+                'view_tour', 'change_tour',  # no add_tour — Agents manage, not book
                 'view_sale', 'add_sale',
             ]
         )
         groups['Agent'].permissions.set(agent_permissions)
         groups['Verified Agents'].permissions.set(agent_permissions)
-        self.stdout.write('  ✓ Agent group: Can manage properties, amenities, tours, and sales')
+        self.stdout.write('  ✓ Agent group: Can add/view/edit properties, manage amenities, tours, and sales')
 
         # Owner permissions — can view/add/update their own properties and amenities
         owner_permissions = Permission.objects.filter(

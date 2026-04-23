@@ -17,7 +17,7 @@ export default function PropertyDetails() {
   const { data: property, isLoading: loadingProperty, isError, error } = useProperty(id);
   const { mutateAsync: createTour, isPending: isBooking } = useCreateTour();
   const { user, isLoggedIn, isLoading: loadingAuth } = useAuth();
-  const { isAuthenticated } = useContextAuth();
+  const { isAuthenticated, isAdmin, isAgent, isOwner, isBuyer, isAuthLoading } = useContextAuth();
   const navigate = useNavigate();
   
   const [activeImage, setActiveImage] = useState(0);
@@ -58,9 +58,11 @@ export default function PropertyDetails() {
     user.id === property?.agent
   );
 
+  const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect width='800' height='600' fill='%23e5e7eb'/%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='24' fill='%239ca3af' text-anchor='middle' dy='.3em'%3ENo Image Available%3C/text%3E%3C/svg%3E";
+
   const images = property.images && property.images.length > 0
-    ? property.images 
-    : [{ image: "https://via.placeholder.com/800x600?text=No+Image+Available" }];
+    ? property.images
+    : [{ image: PLACEHOLDER }];
   const agentEmail = property?.agent_details?.email;
   const contactAgent = () => {
     if (agentEmail) {
@@ -226,7 +228,7 @@ export default function PropertyDetails() {
           </section>
 
           {/* Image Manager — owner/agent only */}
-          {isOwnerOrAgent && (
+          {(isAgent || isOwner || isAdmin) && (
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">Manage Photos</h2>
@@ -284,9 +286,14 @@ export default function PropertyDetails() {
               </Alert>
             )}
 
-            {!showBookingForm ? (
+            {isAuthLoading ? (
+              <div className="space-y-3">
+                <div className="h-12 w-full bg-gray-100 animate-pulse rounded-xl" />
+                <div className="h-12 w-full bg-gray-100 animate-pulse rounded-xl" />
+              </div>
+            ) : !showBookingForm ? (
               <div className="space-y-4">
-                {isAuthenticated ? (
+                {isBuyer ? (
                   <Button 
                     onClick={() => setShowBookingForm(true)}
                     className="w-full bg-blue-800 hover:bg-blue-900 text-white h-12 text-lg font-semibold rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -294,7 +301,7 @@ export default function PropertyDetails() {
                     <CalendarCheck className="w-5 h-5" />
                     Book a Tour
                   </Button>
-                ) : (
+                ) : !isAuthenticated ? (
                   <Button
                     onClick={() => (window.location.href = "/login")}
                     className="w-full bg-blue-800 hover:bg-blue-900 text-white h-12 text-lg font-semibold rounded-xl flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
@@ -302,9 +309,9 @@ export default function PropertyDetails() {
                     <CalendarCheck className="w-5 h-5" />
                     Login to Book
                   </Button>
-                )}
+                ) : null}
 
-                {(user?.groups?.includes("Admin") || user?.id === property.owner || user?.id === property.agent) && (
+                {(isAgent || isOwner || isAdmin) && (
                   <Button 
                     variant="secondary"
                     onClick={() => navigate(`/properties/${property.id}/edit`)}
@@ -314,7 +321,7 @@ export default function PropertyDetails() {
                     Edit Listing
                   </Button>
                 )}
-                {isOwnerOrAgent && (
+                {(isAgent || isOwner || isAdmin) && (
                   <Button 
                     variant="outline"
                     onClick={() => setShowImageManager(v => !v)}
@@ -367,13 +374,15 @@ export default function PropertyDetails() {
               </div>
             )}
             
-            <Button
-              variant="outline"
-              onClick={contactAgent}
-              className="w-full h-12 text-blue-800 border-blue-200 hover:bg-blue-50 font-semibold rounded-xl transition-all"
-            >
-              Contact Agent
-            </Button>
+            {isBuyer && (
+              <Button
+                variant="outline"
+                onClick={contactAgent}
+                className="w-full h-12 text-blue-800 border-blue-200 hover:bg-blue-50 font-semibold rounded-xl transition-all"
+              >
+                Contact Agent
+              </Button>
+            )}
 
             <div className="mt-6 pt-6 border-t border-gray-100 text-center">
               <p className="text-xs text-gray-400">

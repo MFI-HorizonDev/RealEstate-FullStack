@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet, apiDelete, apiPatch } from "@/services/api/apiClient";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const STATUS_COLORS = {
 
 export default function ManageProperties() {
   const { isLoggedIn } = useAuth();
+  const { isAdmin } = useContextAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
 
@@ -114,7 +116,7 @@ export default function ManageProperties() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        {p.status === "UNDER_REVIEW" && (
+                        {isAdmin && p.status === "UNDER_REVIEW" && (
                           <>
                             <Button size="sm" className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700 text-white gap-1"
                               onClick={() => statusMutation.mutate({ id: p.id, status: "ACTIVE" })}
@@ -128,11 +130,13 @@ export default function ManageProperties() {
                             </Button>
                           </>
                         )}
-                        <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1"
-                          onClick={() => { if (confirm(`Delete "${p.property_name}"?`)) deleteMutation.mutate(p.id); }}
-                          disabled={deleteMutation.isPending}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
+                        {isAdmin && (
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1"
+                            onClick={() => { if (confirm(`Delete "${p.property_name}"?`)) deleteMutation.mutate(p.id); }}
+                            disabled={deleteMutation.isPending}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>

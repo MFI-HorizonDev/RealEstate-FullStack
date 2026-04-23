@@ -1,6 +1,7 @@
 import React from "react";
 import { useDeleteTour, useTours, useTourAgentAction, useUpdateTour } from "@/services/api/useTours";
 import { useAuth } from "@/services/api/useAuth";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { 
   Card, 
   CardContent, 
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 
 export default function Tours() {
   const { user, isLoggedIn, isLoading, isError, error } = useAuth();
+  const { isAdmin: isAdminFromContext } = useContextAuth();
   const { data: tours = [], isLoading: loadingTours } = useTours({ enabled: isLoggedIn });
   const { mutate: updateTourStatus, isPending: isUpdating } = useTourAgentAction();
   const { mutate: updateTour, isPending: isManaging } = useUpdateTour();
@@ -281,14 +283,16 @@ export default function Tours() {
                     >
                       Mark Completed
                     </Button>
-                    <Button
-                      onClick={() => handleDelete(tour.id)}
-                      disabled={isDeleting}
-                      variant="outline"
-                      className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold h-10"
-                    >
-                      Delete
-                    </Button>
+                    {isAdminFromContext && (
+                      <Button
+                        onClick={() => handleDelete(tour.id)}
+                        disabled={isDeleting}
+                        variant="outline"
+                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold h-10"
+                      >
+                        Delete
+                      </Button>
+                    )}
                     <Button
                       onClick={() => openEditSchedule(tour)}
                       disabled={isManaging}

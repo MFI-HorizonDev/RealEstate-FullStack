@@ -37,7 +37,7 @@ const STATUS_TABS = [
 
 export default function MyListings() {
   const { user, isLoggedIn } = useAuth();
-  const { isAgent, isOwner } = useContextAuth();
+  const { isAgent, isOwner, isAdmin } = useContextAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -95,7 +95,7 @@ export default function MyListings() {
           <h1 className="text-3xl font-bold text-gray-900">My Listings</h1>
           <p className="text-gray-500 mt-1">Manage all properties you've posted.</p>
         </div>
-        {(isAgent || isOwner) && (
+        {(isAgent || isOwner || isAdmin) && (
           <Link to="/properties/create">
             <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
               <PlusCircle className="w-4 h-4" /> New Listing
@@ -176,7 +176,7 @@ export default function MyListings() {
                   ? "You haven't created any listings yet."
                   : "No listings match your current filter."}
               </p>
-              {myProperties.length === 0 && (isAgent || isOwner) && (
+              {myProperties.length === 0 && (isAgent || isOwner || isAdmin) && (
                 <Link to="/properties/create">
                   <Button className="mt-4 bg-blue-800 text-white">Create Your First Listing</Button>
                 </Link>
@@ -250,20 +250,24 @@ export default function MyListings() {
                       <Eye className="w-3.5 h-3.5" /> View
                     </Button>
                   </Link>
-                  <Link to={`/properties/${p.id}/edit`}>
-                    <Button size="sm" className="gap-1.5 w-full sm:w-auto bg-blue-800 hover:bg-blue-900 text-white">
-                      <Pencil className="w-3.5 h-3.5" /> Edit
+                  {(isAgent || isOwner || isAdmin) && (
+                    <Link to={`/properties/${p.id}/edit`}>
+                      <Button size="sm" className="gap-1.5 w-full sm:w-auto bg-blue-800 hover:bg-blue-900 text-white">
+                        <Pencil className="w-3.5 h-3.5" /> Edit
+                      </Button>
+                    </Link>
+                  )}
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50"
+                      onClick={() => handleDelete(p)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
                     </Button>
-                  </Link>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5 w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50"
-                    onClick={() => handleDelete(p)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </Button>
+                  )}
                 </div>
               </div>
             ))}

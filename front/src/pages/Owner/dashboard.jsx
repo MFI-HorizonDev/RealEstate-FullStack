@@ -24,7 +24,7 @@ function StatusBadge({ status }) {
 
 export default function OwnerDashboard() {
   const { user, isLoggedIn } = useAuth();
-  const { isAgent, isOwner } = useContextAuth();
+  const { isAgent, isOwner, isAdmin } = useContextAuth();
   const { data, isLoading: loadingProps } = useProperties({ page: 1, enabled: isLoggedIn });
   const { data: sales = [], isLoading: loadingSales } = useSales({ enabled: isLoggedIn });
 
@@ -45,7 +45,7 @@ export default function OwnerDashboard() {
           <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
           <p className="text-gray-500 mt-1">Manage your property listings and sales.</p>
         </div>
-        {(isAgent || isOwner) && (
+        {(isAgent || isOwner || isAdmin) && (
           <Link to="/properties/create">
             <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
               <PlusCircle className="w-4 h-4" /> New Listing
@@ -91,7 +91,7 @@ export default function OwnerDashboard() {
             <div className="text-center py-12">
               <House className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 mb-4">You haven't listed any properties yet.</p>
-              {(isAgent || isOwner) && (
+              {(isAgent || isOwner || isAdmin) && (
                 <Link to="/properties/create"><Button className="bg-blue-800 text-white">Create Your First Listing</Button></Link>
               )}
             </div>
