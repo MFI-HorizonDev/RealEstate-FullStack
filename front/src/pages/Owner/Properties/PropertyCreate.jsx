@@ -21,13 +21,14 @@ import {
 const LISTING_TYPES = [
   { value: "SALE",        label: "For Sale" },
   { value: "RENT",        label: "For Rent" },
-  { value: "LEASE",       label: "For Lease" },
-  { value: "FORECLOSURE", label: "Foreclosure" },
 ];
 
 const PROPERTY_CATEGORIES = [
-  "House & Lot", "Condominium", "Apartment", "Villa",
-  "Townhouse", "Commercial Space", "Warehouse", "Land",
+  { value: "HOUSE_AND_LOT", label: "House and Lot" },
+  { value: "LOT", label: "Lot" },
+  { value: "APARTMENT", label: "Apartment" },
+  { value: "CONDO", label: "Condo" },
+  { value: "COMMERCIAL_SPACE", label: "Commercial Space" },
 ];
 
 const PRESET_AMENITIES = [
@@ -54,11 +55,12 @@ export default function PropertyCreate() {
     property_size: "",
     price: "",
     type: "SALE",
+    category: "HOUSE_AND_LOT",
+    building_size: "",
     num_bedrooms: "0",
     num_bathrooms: "1",
     is_available_for_tour: false,
     // extra UI-only field (not sent to backend)
-    property_category: "",
     num_floors: "",
     parking_slots: "",
     year_built: "",
@@ -102,12 +104,13 @@ export default function PropertyCreate() {
     }
 
     // Strip UI-only fields before sending
-    const { property_category, num_floors, parking_slots, year_built, ...backendData } = formData;
+    const { num_floors, parking_slots, year_built, ...backendData } = formData;
 
     const payload = {
       ...backendData,
       property_municipality: parseInt(formData.property_municipality),
       property_size: parseFloat(formData.property_size),
+      building_size: parseFloat(formData.building_size) || 0,
       price: parseFloat(formData.price) || 0,
       num_bedrooms: parseInt(formData.num_bedrooms) || 0,
       num_bathrooms: parseInt(formData.num_bathrooms) || 1,
@@ -115,7 +118,11 @@ export default function PropertyCreate() {
 
     // Build description with specs appended
     const specLines = [];
-    if (property_category)  specLines.push(`Property Type: ${property_category}`);
+    if (formData.category)  {
+      const categoryLabel =
+        PROPERTY_CATEGORIES.find((c) => c.value === formData.category)?.label || formData.category;
+      specLines.push(`Property Type: ${categoryLabel}`);
+    }
     if (num_floors)         specLines.push(`Floors: ${num_floors}`);
     if (parking_slots)      specLines.push(`Parking Slots: ${parking_slots}`);
     if (year_built)         specLines.push(`Year Built: ${year_built}`);
@@ -197,7 +204,7 @@ export default function PropertyCreate() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <Label htmlFor="property_name">Property Name *</Label>
-                <Input id="property_name" name="property_name" placeholder="e.g. Modern Villa in BGC"
+                <Input id="property_name" name="property_name" placeholder="e.g. Modern Condo in BGC"
                   value={formData.property_name} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
@@ -229,8 +236,12 @@ export default function PropertyCreate() {
               <div className="space-y-2">
                 <Label htmlFor="price">Asking Price (₱)</Label>
                 <Input id="price" name="price" type="number" min="0"
-                  placeholder="Leave blank to auto-calculate" value={formData.price} onChange={handleChange} />
-                <p className="text-xs text-gray-400">If left blank, price is calculated from municipality rate + amenities.</p>
+                  placeholder={formData.type === "RENT" ? "Required for rent listings" : "Leave blank to auto-calculate"} value={formData.price} onChange={handleChange} />
+                <p className="text-xs text-gray-400">
+                  {formData.type === "RENT"
+                    ? "For Rent listings use fixed manual price."
+                    : "For Sale can be auto-calculated from municipality rate + amenities."}
+                </p>
               </div>
             </div>
 
@@ -287,11 +298,11 @@ export default function PropertyCreate() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="property_category">Property Category</Label>
-                <Select value={formData.property_category} onValueChange={v => setField("property_category", v)}>
-                  <SelectTrigger id="property_category"><SelectValue placeholder="Select category" /></SelectTrigger>
+                <Label htmlFor="category">Property Category</Label>
+                <Select value={formData.category} onValueChange={v => setField("category", v)}>
+                  <SelectTrigger id="category"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
-                    {PROPERTY_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {PROPERTY_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -300,6 +311,11 @@ export default function PropertyCreate() {
                 <Input id="year_built" name="year_built" type="number" min="1900" max={new Date().getFullYear()}
                   placeholder="e.g. 2018" value={formData.year_built} onChange={handleChange} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="building_size">Building Size (sqm)</Label>
+              <Input id="building_size" name="building_size" type="number" min="0"
+                placeholder="e.g. 80" value={formData.building_size} onChange={handleChange} />
             </div>
           </CardContent>
         </Card>

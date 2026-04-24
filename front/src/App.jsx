@@ -137,8 +137,6 @@ export default function App() {
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="SALE">For Sale</SelectItem>
                     <SelectItem value="RENT">For Rent</SelectItem>
-                    <SelectItem value="LEASE">For Lease</SelectItem>
-                    <SelectItem value="FORECLOSURE">Foreclosure</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -191,10 +191,30 @@ class Command(BaseCommand):
 
         # Create Properties
         properties = []
+        category_choices = ['HOUSE_AND_LOT', 'LOT', 'APARTMENT', 'CONDO', 'COMMERCIAL_SPACE']
         for i in range(number):
             owner = random.choice(owners) if owners else None
             agent = random.choice(agents) if agents else None
             municipality = random.choice(municipalities)
+            category = random.choice(category_choices)
+
+            lot_size = random.randint(70, 800)
+            if category == 'LOT':
+                building_size = 0
+                bedrooms = 0
+                bathrooms = 0
+            elif category in ['APARTMENT', 'CONDO']:
+                building_size = random.randint(28, 220)
+                bedrooms = random.randint(1, 4)
+                bathrooms = random.randint(1, 3)
+            elif category == 'COMMERCIAL_SPACE':
+                building_size = random.randint(60, 450)
+                bedrooms = 0
+                bathrooms = random.randint(1, 4)
+            else:  # HOUSE_AND_LOT
+                building_size = random.randint(50, min(420, lot_size))
+                bedrooms = random.randint(1, 6)
+                bathrooms = random.randint(1, 4)
 
             property_obj = Property.objects.create(
                 property_name=seeder.faker.catch_phrase(),
@@ -203,11 +223,13 @@ class Command(BaseCommand):
                 property_municipality=municipality,
                 owner=owner,
                 agent=agent,
-                property_size=random.randint(50, 500),
-                num_bedrooms=random.randint(1, 5),
-                num_bathrooms=random.randint(1, 3),
+                category=category,
+                property_size=lot_size,
+                building_size=building_size,
+                num_bedrooms=bedrooms,
+                num_bathrooms=bathrooms,
                 price=random.randint(1000000, 50000000),
-                type=random.choice(['SALE', 'RENT', 'LEASE', 'FORECLOSURE']),
+                type=random.choice(['SALE', 'RENT']),
                 is_available_for_tour=random.choice([True, False]),
                 status=random.choice(['ACTIVE', 'SOLD', 'UNDER_REVIEW'])
             )

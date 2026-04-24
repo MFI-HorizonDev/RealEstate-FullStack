@@ -99,6 +99,17 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A property cannot have more than 20 images.")
         return value
 
+    def validate(self, data):
+        listing_type = data.get("type")
+        price = data.get("price")
+
+        if listing_type == "RENT" and (price is None or float(price) <= 0):
+            raise serializers.ValidationError({
+                "price": "For Rent listings require a fixed price greater than 0."
+            })
+
+        return data
+
     def create(self, validated_data):
         amenities_data = validated_data.pop('amenities', [])
         images_data = validated_data.pop('images', [])

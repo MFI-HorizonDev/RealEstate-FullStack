@@ -22,8 +22,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const LISTING_TYPES = [
   { value: "SALE", label: "For Sale" },
   { value: "RENT", label: "For Rent" },
-  { value: "LEASE", label: "For Lease" },
-  { value: "FORECLOSURE", label: "Foreclosure" },
 ];
 const IMAGE_PLACEHOLDER = "https://via.placeholder.com/800x600?text=No+Image+Available";
 
@@ -75,7 +73,7 @@ export default function AllProperties() {
       if (munId !== selectedMunicipality) return false;
     }
 
-    // Listing type filter (SALE / RENT / LEASE / FORECLOSURE)
+    // Listing type filter (SALE / RENT)
     if (selectedType && selectedType !== "all") {
       if ((p.type || "") !== selectedType) return false;
     }

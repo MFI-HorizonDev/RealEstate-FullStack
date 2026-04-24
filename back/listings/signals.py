@@ -28,6 +28,8 @@ def flag_property_price_deviation(sender, instance, created, **kwargs):
     # need a price to compare
     if instance.price is None:
         return
+    if instance.type == "RENT":
+        return
 
     engine = PricingEngine()
     breakdown = engine.calculate_valuation(instance)
