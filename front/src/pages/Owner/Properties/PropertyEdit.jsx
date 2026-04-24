@@ -20,8 +20,6 @@ import {
 const LISTING_TYPES = [
   { value: "SALE",        label: "For Sale" },
   { value: "RENT",        label: "For Rent" },
-  { value: "LEASE",       label: "For Lease" },
-  { value: "FORECLOSURE", label: "Foreclosure" },
 ];
 
 export default function PropertyEdit() {

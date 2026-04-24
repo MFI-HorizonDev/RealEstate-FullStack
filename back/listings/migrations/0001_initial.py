@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                 ('num_bathrooms', models.IntegerField(default=0, validators=[django.core.validators.MinValueValidator(0)])),
                 ('price', models.IntegerField(blank=True, null=True, validators=[django.core.validators.MinValueValidator(0)])),
                 ('property_img', models.ImageField(upload_to='propertyimg/')),
-                ('type', models.CharField(choices=[('SALE', 'For Sale'), ('RENT', 'For Rent'), ('LEASE', 'For Lease'), ('FORECLOSURE', 'Foreclosure')], max_length=12)),
+                ('type', models.CharField(choices=[('SALE', 'For Sale'), ('RENT', 'For Rent')], max_length=12)),
                 ('is_available_for_tour', models.BooleanField(default=False)),
                 ('status', models.CharField(choices=[('ACTIVE', 'Active'), ('SOLD', 'Sold'), ('UNDER_REVIEW', 'Under Review')], default='ACTIVE', max_length=15)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

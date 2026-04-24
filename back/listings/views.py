@@ -232,11 +232,7 @@ class ValuationPreviewView(generics.RetrieveAPIView):
     def retrieve(self, request, *args, **kwargs):
         property_obj = self.get_object()
         breakdown = PricingEngine().calculate_valuation(property_obj)
-        return Response({
-            "base_price": breakdown["base_price"],
-            "amenity_impact": breakdown["amenity_impact"],
-            "estimated_total": breakdown["estimated_total"],
-        })
+        return Response(breakdown)
 
 
 class RegisterView(generics.CreateAPIView):

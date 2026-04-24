@@ -16,8 +16,6 @@ class Property(models.Model):
     LISTING_TYPES= [
         ("SALE", "For Sale"),
         ("RENT", "For Rent"),
-        ("LEASE", "For Lease"),
-        ("FORECLOSURE", "Foreclosure"),
     ]
     STATUS_TYPES= [
         ("ACTIVE", "Active"),
@@ -26,13 +24,22 @@ class Property(models.Model):
         ("REJECTED", "Rejected"),
         ("INACTIVE", "Inactive"),
     ]
+    CATEGORY_TYPES = [
+        ("HOUSE_AND_LOT", "House and Lot"),
+        ("LOT", "Lot"),
+        ("APARTMENT", "Apartment"),
+        ("CONDO", "Condo"),
+        ("COMMERCIAL_SPACE", "Commercial Space"),
+    ]
     property_name = models.CharField(max_length=255)
     property_description = models.TextField(blank=True, null=True)
     property_address = models.CharField(max_length=1000)
     property_municipality = models.ForeignKey(Municipality, on_delete=models.CASCADE, related_name="properties")
     owner = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="owned_properties")
     agent = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="listed_properties")
+    category = models.CharField(max_length=20, choices=CATEGORY_TYPES, default="HOUSE_AND_LOT")
     property_size = models.IntegerField(validators=[MinValueValidator(0)])
+    building_size = models.IntegerField(validators=[MinValueValidator(0)], default=0)
     num_bedrooms = models.IntegerField(validators=[MinValueValidator(0)], default=0)
     num_bathrooms = models.IntegerField(validators=[MinValueValidator(0)], default=0)
     price = models.IntegerField(validators=[MinValueValidator(0)], blank=True, null=True)
@@ -68,12 +75,16 @@ class Property(models.Model):
         return self.base_price() + self.amenity_price_total()
 
     def save(self, *args, **kwargs):
-        if not self.pk and (self.price is None or self.price == 0):
+        if self.type == "RENT":
+            # Rent listings stay fixed/manual and should not use sale valuation.
+            if self.price is None:
+                self.price = 0
+        elif not self.pk and (self.price is None or self.price == 0):
             self.price = self.total_price() 
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.type} in {self.property_municipality}, {self.property_name} at ₱{self.price:,}"
+        return f"{self.category} {self.type} in {self.property_municipality}, {self.property_name} at ₱{self.price:,}"
 
 def property_image_upload_path(instance, filename):
     return f'propertyimg/property_{instance.property.id}/{filename}'

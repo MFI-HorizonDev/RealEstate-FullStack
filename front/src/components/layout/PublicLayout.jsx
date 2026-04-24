@@ -131,8 +131,6 @@ export default function PublicLayout({ children }) {
             <div>
               <h4 className="text-white font-bold mb-6 text-sm uppercase tracking-widest">Support</h4>
               <ul className="space-y-3 text-sm">
-                <li><a href="#" className="hover:text-amber-300 transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-amber-300 transition-colors">Contact Us</a></li>
                 <li><a href="#" className="hover:text-amber-300 transition-colors">Privacy Policy</a></li>
                 <li><a href="#" className="hover:text-amber-300 transition-colors">Terms of Service</a></li>
               </ul>
