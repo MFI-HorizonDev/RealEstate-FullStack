@@ -71,10 +71,17 @@ export default function MyListings() {
 
   const allProperties = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
 
-  // Filter to only this owner's properties using owner_id
-  const myProperties = allProperties.filter(
-    (p) => p.owner_id === user?.id || p.owner === user?.username
-  );
+  // Filter listings tied to current user (owner or agent).
+  // Admin keeps visibility of all records.
+  const myProperties = allProperties.filter((p) => {
+    if (isAdmin) return true;
+    return (
+      p.owner_id === user?.id ||
+      p.agent_id === user?.id ||
+      p.owner === user?.username ||
+      p.agent === user?.username
+    );
+  });
 
   // Tab + search filter
   const filtered = myProperties.filter((p) => {

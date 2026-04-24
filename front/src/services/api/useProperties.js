@@ -59,6 +59,7 @@ export function useCreateProperty() {
     mutationFn: (data) => apiPost("/properties/create/", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["properties"] });
+      queryClient.invalidateQueries({ queryKey: ["my-listings"] });
     },
   });
 }
