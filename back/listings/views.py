@@ -30,7 +30,7 @@ class PropertyListView(generics.ListAPIView):
         status_param = self.request.query_params.get('status')
         if status_param:
             queryset = queryset.filter(status=status_param)
-        return queryset
+        return queryset.order_by('-created_at')
 
 # Create new property (agent/owner/admin only)
 class PropertyCreateView(generics.CreateAPIView):

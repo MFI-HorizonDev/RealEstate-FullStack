@@ -15,9 +15,16 @@ function StatusBadge({ status }) {
 }
 
 export default function AgentProperties() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const { data, isLoading, isError, error } = useProperties({ page: 1, enabled: isLoggedIn });
-  const properties = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+  const allProperties = Array.isArray(data?.results) ? data.results : Array.isArray(data) ? data : [];
+  const properties = allProperties.filter(
+    (p) =>
+      p.owner_id === user?.id ||
+      p.agent_id === user?.id ||
+      p.owner === user?.username ||
+      p.agent === user?.username
+  );
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
