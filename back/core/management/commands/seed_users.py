@@ -7,7 +7,7 @@ import random
 
 from listings.models import Municipality, Property, Amenity, PropertyImage
 from tours.models import Tour
-from deals.models import Sale, Commission, PendingSaleRequest
+from deals.models import Sale, PendingSaleRequest
 
 
 class Command(BaseCommand):
@@ -285,16 +285,6 @@ class Command(BaseCommand):
                 )
                 self.stdout.write(f'  ✓ Created Sale: {property_obj.property_name}')
 
-                # Create Commission for the sale
-                if property_obj.agent:
-                    Commission.objects.create(
-                        sale=sale,
-                        agent=property_obj.agent,
-                        amount_calculated=sale.final_price * 0.05,
-                        commission_rate=5.00,
-                        is_paid=random.choice([True, False])
-                    )
-
         # Create Pending Sale Requests
         if properties and all_users:
             for i in range(min(2, len(properties))):
@@ -320,7 +310,6 @@ class Command(BaseCommand):
         propertyimage_ct = ContentType.objects.get_for_model(PropertyImage)
         tour_ct = ContentType.objects.get_for_model(Tour)
         sale_ct = ContentType.objects.get_for_model(Sale)
-        commission_ct = ContentType.objects.get_for_model(Commission)
         pendingsale_ct = ContentType.objects.get_for_model(PendingSaleRequest)
 
         # SuperAdmin permissions — can do absolutely everything
@@ -332,7 +321,7 @@ class Command(BaseCommand):
         admin_permissions = Permission.objects.filter(
             content_type__in=[
                 property_ct, municipality_ct, amenity_ct, propertyimage_ct,
-                tour_ct, sale_ct, commission_ct, pendingsale_ct
+                tour_ct, sale_ct, pendingsale_ct
             ]
         )
         groups['Admin'].permissions.set(admin_permissions)
@@ -390,7 +379,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Property Images: {PropertyImage.objects.count()}'))
         self.stdout.write(self.style.SUCCESS(f'Tours: {Tour.objects.count()}'))
         self.stdout.write(self.style.SUCCESS(f'Sales: {Sale.objects.count()}'))
-        self.stdout.write(self.style.SUCCESS(f'Commissions: {Commission.objects.count()}'))
         self.stdout.write(self.style.SUCCESS(f'Pending Sale Requests: {PendingSaleRequest.objects.count()}'))
         self.stdout.write(self.style.SUCCESS('\nDefault password for seeded non-superadmin users: password123'))
 

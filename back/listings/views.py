@@ -9,7 +9,7 @@ from .tasks import update_all_market_buffers
 from .throttles import VerifiedAgentThrottle, UnverifiedAgentThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 
 # Health Check
 class HealthCheckView(APIView):
@@ -86,6 +86,88 @@ class AdminPropertyStatusView(APIView):
         property_obj.status = new_status
         property_obj.save(update_fields=["status"])
         return Response({"id": pk, "status": new_status}, status=status.HTTP_200_OK)
+
+
+class AdminPropertyAgentAssignView(APIView):
+    """
+    Admin endpoint to assign, reassign, or clear a property's assigned agent.
+    Accepts payload: {"agent_id": <int|null>}
+    """
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminGroup]
+
+    def patch(self, request, pk):
+        try:
+            property_obj = Property.objects.get(pk=pk)
+        except Property.DoesNotExist:
+            return Response({"detail": "Property not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        incoming_agent_id = request.data.get("agent_id", None)
+
+        # Allow admin to unassign an agent explicitly
+        if incoming_agent_id in [None, "", "null"]:
+            property_obj.agent = None
+            property_obj.save(update_fields=["agent"])
+            return Response(
+                {"id": pk, "agent_id": None, "detail": "Agent unassigned successfully."},
+                status=status.HTTP_200_OK,
+            )
+
+        try:
+            agent_id = int(incoming_agent_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "agent_id must be an integer or null."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            selected_user = User.objects.get(pk=agent_id)
+        except User.DoesNotExist:
+            return Response({"detail": "Selected agent user not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        is_agent_user = selected_user.groups.filter(name__in=["Agent", "Verified Agents"]).exists()
+        if not is_agent_user and not selected_user.is_superuser:
+            return Response(
+                {"detail": "Selected user is not an Agent."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        property_obj.agent = selected_user
+        property_obj.save(update_fields=["agent"])
+
+        return Response(
+            {
+                "id": pk,
+                "agent_id": selected_user.id,
+                "agent_username": selected_user.username,
+                "detail": "Agent assigned successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class AdminAgentListView(APIView):
+    """Return only users that can be assigned as agents."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAdminGroup]
+
+    def get(self, request):
+        agent_users = (
+            User.objects.filter(groups__name__in=["Agent", "Verified Agents"])
+            .distinct()
+            .order_by("first_name", "last_name", "username")
+        )
+
+        data = [
+            {
+                "id": user.id,
+                "name": f"{user.first_name} {user.last_name}".strip() or user.username,
+                "username": user.username,
+            }
+            for user in agent_users
+        ]
+        return Response(data, status=status.HTTP_200_OK)
 
 # List all images for a property
 class PropertyImageListView(generics.ListAPIView):

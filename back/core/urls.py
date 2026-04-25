@@ -36,6 +36,8 @@ urlpatterns = [
     path('api/properties/<int:pk>/update/', PropertyUpdateView.as_view(), name='property-update'),
     path('api/properties/<int:pk>/delete/', PropertyDeleteView.as_view(), name='property-delete'),
     path('api/properties/<int:pk>/admin-status/', AdminPropertyStatusView.as_view(), name='property-admin-status'),
+    path('api/properties/<int:pk>/admin-agent/', AdminPropertyAgentAssignView.as_view(), name='property-admin-agent-assign'),
+    path('api/admin/agents/', AdminAgentListView.as_view(), name='admin-agent-list'),
     path('api/properties/<int:pk>/valuation-preview/', ValuationPreviewView.as_view(), name='property-valuation-preview'),
 
     # Property Images
@@ -71,12 +73,6 @@ urlpatterns = [
     path('api/sales/<int:pk>/', SaleRetrieveView.as_view(), name='sale-retrieve'),
     path('api/sales/<int:pk>/update/', SaleUpdateView.as_view(), name='sale-update'),
     path('api/sales/<int:pk>/delete/', SaleDeleteView.as_view(), name='sale-delete'),
-
-    # Commissions
-    path('api/commissions/', CommissionListView.as_view(), name='commission-list'),
-    path('api/commissions/<int:pk>/', CommissionRetrieveView.as_view(), name='commission-retrieve'),
-    path('api/commissions/<int:pk>/update/', CommissionUpdateView.as_view(), name='commission-update'),
-    path('api/commissions/<int:pk>/delete/', CommissionDeleteView.as_view(), name='commission-delete'),
 
     # Sales Requests
     path('api/pending-sales/', PendingSaleRequestListView.as_view(), name='pending-sale-list'),

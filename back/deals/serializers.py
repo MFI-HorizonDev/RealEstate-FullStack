@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Sale, Commission, PendingSaleRequest
+from .models import Sale, PendingSaleRequest
 from listings.models import Property
 from listings.serializers import PropertySerializer
 
@@ -16,17 +16,8 @@ def _validate_unique_sale_property(property_obj, current_sale=None):
             'property_id': 'A sale record already exists for this property.'
         })
 
-class CommissionSerializer(serializers.ModelSerializer):
-    agent_name = serializers.CharField(source='agent.username', read_only=True)
-
-    class Meta:
-        model = Commission
-        fields = '__all__'
-
-
 class SaleSerializer(serializers.ModelSerializer):
     property = PropertySerializer(read_only=True)
-    commissions = CommissionSerializer(many=True, read_only=True)
     property_id = serializers.PrimaryKeyRelatedField(queryset=Property.objects.all(), write_only=True)
 
     class Meta:
