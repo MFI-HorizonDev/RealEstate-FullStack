@@ -1,7 +1,6 @@
 from django.contrib import admin
-from .models import Sale,Commission
+from .models import Sale
 
 # Register your models here.
 
 admin.site.register(Sale)
-admin.site.register(Commission)

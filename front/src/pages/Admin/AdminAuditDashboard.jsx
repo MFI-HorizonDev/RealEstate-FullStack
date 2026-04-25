@@ -5,6 +5,8 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +27,7 @@ import {
 } from "@/services/api/adminAuditHooks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { apiGet, apiPatch } from "@/services/api/apiClient";
 
 function peso(value) {
   return new Intl.NumberFormat("en-PH", {
@@ -36,8 +39,14 @@ function peso(value) {
 
 export default function AdminAuditDashboard() {
   const [activeTab, setActiveTab] = useState("UNDER_REVIEW");
+  const [agentDraftByProperty, setAgentDraftByProperty] = useState({});
   const token = localStorage.getItem("access");
-  const { data = [], isLoading, isError } = useFlaggedListings(token, activeTab);
+  const { data = [], isLoading, isError, refetch } = useFlaggedListings(token, activeTab);
+  const { data: agentOptions = [] } = useQuery({
+    queryKey: ["admin-agent-options"],
+    queryFn: () => apiGet("/admin/agents/"),
+    enabled: Boolean(token),
+  });
   
   const approveMutation = useApproveListing(token);
   const rejectMutation = useRejectListing(token);
@@ -46,6 +55,10 @@ export default function AdminAuditDashboard() {
   const approveRoleMutation = useApproveRoleRequest(token);
   const rejectRoleMutation = useRejectRoleRequest(token);
   const triggerMarketMutation = useTriggerMarketUpdate(token);
+  const assignAgentMutation = useMutation({
+    mutationFn: ({ propertyId, agent_id }) =>
+      apiPatch(`/properties/${propertyId}/admin-agent/`, { agent_id }),
+  });
 
   const handleApprove = useCallback((id, name) => {
     const toastId = toast.loading(`Approving ${name}...`);
@@ -62,6 +75,30 @@ export default function AdminAuditDashboard() {
       onError: (err) => toast.error(`Failed to reject: ${err.message}`, { id: toastId })
     });
   }, [rejectMutation]);
+
+  const setAgentDraft = useCallback((propertyId, value) => {
+    setAgentDraftByProperty((prev) => ({ ...prev, [propertyId]: value }));
+  }, []);
+
+  const handleAssignAgent = useCallback(
+    (propertyId) => {
+      const raw = agentDraftByProperty[propertyId];
+      const toastId = toast.loading("Updating assigned agent...");
+      assignAgentMutation.mutate(
+        { propertyId, agent_id: raw ? Number(raw) : null },
+        {
+          onSuccess: () => {
+            toast.success("Assigned agent updated.", { id: toastId });
+            refetch();
+          },
+          onError: (err) => {
+            toast.error(err?.message || "Failed to update assigned agent.", { id: toastId });
+          },
+        },
+      );
+    },
+    [agentDraftByProperty, assignAgentMutation, refetch],
+  );
 
   const columns = useMemo(
     () => [
@@ -96,10 +133,51 @@ export default function AdminAuditDashboard() {
         header: "Agent Name",
         cell: ({ row }) => {
           const agent = row.original.agent_details;
+          const propertyId = row.original.id;
+          const isUpdating =
+            assignAgentMutation.isPending &&
+            assignAgentMutation.variables?.propertyId === propertyId;
           return (
-            <span className="text-slate-700">
-              {agent ? `${agent.first_name} ${agent.last_name}` : "Unassigned"}
-            </span>
+            <div className="flex flex-col gap-2">
+              <span className="text-slate-700">
+                {agent ? `${agent.first_name} ${agent.last_name}` : "Unassigned"}
+              </span>
+              <div className="flex items-center gap-2">
+                <select
+                  className="w-44 rounded border border-slate-200 px-2 py-1 text-xs"
+                  value={agentDraftByProperty[propertyId] ?? (row.original.agent_id ? String(row.original.agent_id) : "")}
+                  onChange={(e) => setAgentDraft(propertyId, e.target.value)}
+                >
+                  <option value="">Unassigned</option>
+                  {agentOptions.map((agentOption) => (
+                    <option key={agentOption.id} value={String(agentOption.id)}>
+                      {agentOption.name}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => handleAssignAgent(propertyId)}
+                  disabled={isUpdating}
+                >
+                  {isUpdating ? "..." : "Save"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs text-slate-600"
+                  onClick={() => {
+                    setAgentDraft(propertyId, "");
+                    handleAssignAgent(propertyId);
+                  }}
+                  disabled={isUpdating}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
           );
         },
       },
@@ -153,7 +231,19 @@ export default function AdminAuditDashboard() {
         },
       },
     ],
-    [handleApprove, handleReject, approveMutation.isPending, rejectMutation.isPending, approveMutation.variables, rejectMutation.variables]
+    [
+      handleApprove,
+      handleReject,
+      approveMutation.isPending,
+      rejectMutation.isPending,
+      approveMutation.variables,
+      rejectMutation.variables,
+      agentDraftByProperty,
+      setAgentDraft,
+      handleAssignAgent,
+      assignAgentMutation.isPending,
+      assignAgentMutation.variables,
+    ]
   );
 
   const table = useReactTable({

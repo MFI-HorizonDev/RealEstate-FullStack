@@ -3,10 +3,10 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from decimal import Decimal
-from .models import Sale, Commission, PendingSaleRequest
+from .models import Sale, PendingSaleRequest
 from .serializers import (
     SaleSerializer, SaleCreateSerializer,
-    CommissionSerializer, PendingSaleRequestSerializer
+    PendingSaleRequestSerializer
 )
 from listings.models import Property
 from core.permissions import IsAdminGroupOnly
@@ -93,16 +93,6 @@ class SaleCreateView(generics.CreateAPIView):
                 property_obj.status = 'SOLD'
                 property_obj.save()
 
-                if property_obj.agent:
-                    commission_rate = Decimal('5.00')
-                    commission_amount = (sale_instance.final_price * commission_rate) / 100
-                    Commission.objects.create(
-                        sale=sale_instance,
-                        agent=property_obj.agent,
-                        commission_rate=commission_rate,
-                        amount_calculated=commission_amount
-                    )
-
 
 class SaleRetrieveView(generics.RetrieveAPIView):
     queryset = Sale.objects.all()
@@ -123,39 +113,6 @@ class SaleDeleteView(generics.DestroyAPIView):
     serializer_class = SaleSerializer
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsPropertyOwnerOrAgent]
-
-
-class CommissionListView(generics.ListAPIView):
-    serializer_class = CommissionSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        if self.request.user.is_superuser:
-            return Commission.objects.all()
-        return Commission.objects.filter(agent=self.request.user)
-
-
-class CommissionRetrieveView(generics.RetrieveAPIView):
-    queryset = Commission.objects.all()
-    serializer_class = CommissionSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-
-class CommissionUpdateView(generics.UpdateAPIView):
-    queryset = Commission.objects.all()
-    serializer_class = CommissionSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
-
-class CommissionDeleteView(generics.DestroyAPIView):
-    queryset = Commission.objects.all()
-    serializer_class = CommissionSerializer
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
-
 
 
 class PendingSaleRequestListView(generics.ListAPIView):
@@ -187,7 +144,7 @@ class PendingSaleRequestUpdateView(generics.UpdateAPIView):
         property_obj = instance.property
 
         if instance.status == 'APPROVED' and previous_status != 'APPROVED':
-            sale, _ = Sale.objects.get_or_create(
+            Sale.objects.get_or_create(
                 property=property_obj,
                 defaults={
                     'date_sold': instance.created_at.date(),
@@ -198,18 +155,6 @@ class PendingSaleRequestUpdateView(generics.UpdateAPIView):
             )
             property_obj.status = 'SOLD'
             property_obj.save(update_fields=['status'])
-
-            if property_obj.agent:
-                commission_rate = Decimal('5.00')
-                commission_amount = (sale.final_price * commission_rate) / 100
-                Commission.objects.get_or_create(
-                    sale=sale,
-                    agent=property_obj.agent,
-                    defaults={
-                        'commission_rate': commission_rate,
-                        'amount_calculated': commission_amount,
-                    }
-                )
         elif instance.status == 'REJECTED':
             property_obj.status = 'ACTIVE'
             property_obj.save(update_fields=['status'])
