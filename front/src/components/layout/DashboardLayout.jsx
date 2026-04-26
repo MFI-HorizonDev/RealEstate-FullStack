@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }) {
                 </BreadcrumbItem>
                 {breadcrumbs.length > 0 && <BreadcrumbSeparator />}
                 {breadcrumbs.map((bc, idx) => (
-                  <React.Fragment key={bc.href}>
+                  <React.Fragment key={`${bc.href}-${idx}`}>
                     <BreadcrumbItem>
                       {bc.isLast ? (
                         <BreadcrumbPage>{bc.title}</BreadcrumbPage>
