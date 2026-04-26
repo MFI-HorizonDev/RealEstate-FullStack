@@ -3,12 +3,22 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from "
 const AuthContext = createContext(null);
 const BASE_URL = "http://127.0.0.1:8000";
 
+function getAccessTokenFromStorage() {
+  const raw = localStorage.getItem("access");
+  if (typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === "undefined" || trimmed === "null") return null;
+  return trimmed;
+}
+
 async function customFetch(url, options = {}) {
+  const token = getAccessTokenFromStorage();
   return fetch(url, {
     ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });
@@ -75,12 +85,15 @@ export function AuthProvider({ children }) {
   const authValue = useMemo(() => {
     const isAuthenticated = groups.length > 0 || user !== null;
 
+    const isSuperAdmin = user?.is_superuser === true || groups.includes("SuperAdmin") || groups.includes("Super Admin");
+
     return {
       user,
       groups,
       isAuthLoading,
       isAuthenticated,
-      isAdmin: user?.is_superuser === true || user?.is_staff === true || groups.includes("Admin") || groups.includes("SuperAdmin"),
+      isAdmin: user?.is_superuser === true || user?.is_staff === true || groups.includes("Admin") || isSuperAdmin,
+      isSuperAdmin,
       isAgent: groups.includes("Agent"),
       isVerifiedAgent: groups.includes("Verified Agents"),
       isOwner: groups.includes("Owner"),

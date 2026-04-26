@@ -46,6 +46,12 @@ const Home = () => {
     }
   };
 
+  const formatPropertyPrice = (property) => {
+    if (!property?.price) return "Price on request";
+    if (property.type === "RENT") return `₱${Number(property.price).toLocaleString()}/month`;
+    return `₱${Number(property.price).toLocaleString()}`;
+  };
+
   return (
     <div>
       {/* Hero Section */}
@@ -177,7 +183,7 @@ const Home = () => {
                   {property.property_name || `Property ${property.id}`}
                 </h3>
                 <p className="text-gray-600 text-center text-sm">
-                  ₱{property.price?.toLocaleString()} • {property.status}
+                  {formatPropertyPrice(property)} • {property.status}
                 </p>
               </div>
             ))}

@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiGet } from "./apiClient";
+import { useAuth as useContextAuth } from "@/context/AuthContext";
 
 const BASE_URL = "http://127.0.0.1:8000";
 
@@ -71,23 +72,23 @@ export const useUser = () => {
 
 // Compound auth hook
 export const useAuth = () => {
+  const auth = useContextAuth();
   const loginMutation = useLogin();
-  const { data: user, isLoading, isError } = useUser();
-  
+
   const logoutUser = () => {
     logout();
     window.location.href = "/";
   };
 
-  return { 
-    loginMutation, 
-    user, 
-    isLoading, 
-    isError,
+  return {
+    loginMutation,
+    user: auth.user,
+    isLoading: auth.isAuthLoading,
+    isError: false,
     logout: logoutUser,
-    isLoggedIn: !isLoading && Boolean(user),
-    isSuperAdmin: user?.is_superuser || false,
-    groups: user?.groups || [],
+    isLoggedIn: !auth.isAuthLoading && auth.isAuthenticated,
+    isSuperAdmin: auth.isSuperAdmin,
+    groups: auth.groups,
   };
 };
 

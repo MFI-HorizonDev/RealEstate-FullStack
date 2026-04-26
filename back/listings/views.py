@@ -13,6 +13,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import Group, User
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
 JWTAuthentication = CookieJWTAuthentication
 
@@ -143,7 +144,11 @@ class AdminPropertyAgentAssignView(APIView):
             return Response({"detail": "Selected agent user not found."}, status=status.HTTP_404_NOT_FOUND)
 
         is_agent_user = selected_user.groups.filter(name__in=["Agent", "Verified Agents"]).exists()
-        if not is_agent_user and not selected_user.is_superuser:
+        is_requested_agent = (
+            hasattr(selected_user, "profile")
+            and selected_user.profile.requested_role == "Agent"
+        )
+        if not is_agent_user and not is_requested_agent and not selected_user.is_superuser:
             return Response(
                 {"detail": "Selected user is not an Agent."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -170,7 +175,10 @@ class AdminAgentListView(APIView):
 
     def get(self, request):
         agent_users = (
-            User.objects.filter(groups__name__in=["Agent", "Verified Agents"])
+            User.objects.filter(
+                Q(groups__name__in=["Agent", "Verified Agents"])
+                | Q(profile__requested_role="Agent")
+            )
             .distinct()
             .order_by("first_name", "last_name", "username")
         )

@@ -28,13 +28,12 @@ import {
   ClipboardList,
   Zap,
 } from "lucide-react";
-import { logout, useAuth } from "@/services/api/useAuth";
+import { logout } from "@/services/api/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 
 export function AppSidebar() {
   const location = useLocation();
-  const { user } = useAuth();
-  const { isAdmin: canAdminFromContext, isAgent: canCreateAsAgent, isOwner: canCreateAsOwner } = useContextAuth();
+  const { user, isAdmin: canAdminFromContext, isAgent: canCreateAsAgent, isOwner: canCreateAsOwner } = useContextAuth();
 
   const handleLogout = () => {
     logout();
