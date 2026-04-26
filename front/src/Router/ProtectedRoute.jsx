@@ -1,5 +1,5 @@
 import { Navigate } from "react-router";
-import { useAuth } from "@/services/api/useAuth";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 
 export default function ProtectedRoute({ children, requiredRole = null, allow = null, redirectTo = "/" }) {

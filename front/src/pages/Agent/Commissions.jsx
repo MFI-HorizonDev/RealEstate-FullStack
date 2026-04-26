@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "@/services/api/apiClient";
-import { useAuth } from "@/services/api/useAuth";
+import { apiGet } from "@/hooks/api/apiClient";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

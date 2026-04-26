@@ -1,6 +1,7 @@
 import React from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/services/api/useAuth';
+import { useAuth } from "@/hooks/api/authentication/useAuth";
+import { BASE_URL } from "@/hooks/api/config";
 
 /**
  * Reusable UserAvatar component that displays user profile picture
@@ -22,7 +23,7 @@ export const UserAvatar = ({
   // Handle both absolute and relative image URLs
   let profileImage = user.profile?.profile_image;
   if (profileImage && !profileImage.startsWith('http')) {
-    profileImage = `http://localhost:8000${profileImage}`;
+    profileImage = `${BASE_URL}${profileImage}`;
   }
 
   // Use the user data's profile image

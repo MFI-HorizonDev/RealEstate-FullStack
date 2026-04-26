@@ -28,7 +28,7 @@ import {
   ClipboardList,
   Zap,
 } from "lucide-react";
-import { logout } from "@/services/api/useAuth";
+import { logout } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 
 export function AppSidebar() {
@@ -50,6 +50,7 @@ export function AppSidebar() {
   const adminItems = isAdmin ? [
     { title: "Audit Dashboard",     url: "/admin/audit-dashboard",  icon: ShieldAlert },
     { title: "Pending Sales",       url: "/admin/pending-sales",    icon: ClipboardList },
+    { title: "Create Listing",      url: "/properties/create",      icon: PlusCircle },
     { title: "Trigger Market Update", url: "/admin/market-update",  icon: Zap },
   ] : [];
 
@@ -61,6 +62,7 @@ export function AppSidebar() {
   const agentItems = isAgent ? [
     { title: "Agent Dashboard",     url: "/agent/dashboard",        icon: LayoutDashboard },
     { title: "My Tours",            url: "/tours",                  icon: CalendarDays },
+    { title: "Create Listing",      url: "/properties/create",      icon: PlusCircle },
     ...(canAdminFromContext ? [{ title: "My Commissions", url: "/agent/commissions", icon: DollarSign }] : []),
   ] : [];
 
@@ -108,26 +110,26 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-gray-200">
+    <Sidebar className="border-r border-border">
       <SidebarHeader className="p-4">
         <Link to="/" className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-amber-900 rounded-md flex items-center justify-center">
-            <span className="text-white font-bold text-sm">RE</span>
+          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">RE</span>
           </div>
-          <h2 className="font-bold text-lg text-blue-900">RealEstate</h2>
+          <h2 className="font-bold text-lg text-foreground">RealEstate</h2>
         </Link>
         {user && (
           <div className="mt-4 px-2">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Logged in as</p>
-            <p className="text-sm font-bold text-blue-800 truncate">{user.first_name} {user.last_name}</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Logged in as</p>
+            <p className="text-sm font-bold text-primary truncate">{user.first_name} {user.last_name}</p>
             <div className="flex flex-wrap gap-1 mt-1">
               {user.is_superuser && (
-                <span className="text-[10px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200 font-bold uppercase">
+                <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-700 font-bold uppercase">
                   SuperAdmin
                 </span>
               )}
               {user.groups?.map(g => (
-                <span key={g} className="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100 font-bold uppercase">
+                <span key={g} className="text-[10px] bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded border border-border font-bold uppercase">
                   {g}
                 </span>
               ))}
@@ -145,13 +147,13 @@ export function AppSidebar() {
         <NavSection label="Explore"    items={exploreItems} />
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-gray-100">
+      <SidebarFooter className="p-4 border-t border-border">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 w-full text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors"
+                className="flex items-center gap-2 w-full text-red-500 hover:text-red-400 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-500/10 transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>

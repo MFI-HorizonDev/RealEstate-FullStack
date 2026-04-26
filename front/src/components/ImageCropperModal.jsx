@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { X, ZoomIn, RotateCcw, ImagePlus } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notifications';
 
 /**
  * Image Cropper Modal Component
@@ -156,19 +156,13 @@ export const ImageCropperModal = ({
       // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        toast.error('Invalid file type', {
-          description: 'Please upload a valid image file (JPG, PNG, GIF, or WebP)',
-          duration: 3000,
-        });
+        notify.error('Invalid file type. Please upload a valid image (JPG, PNG, GIF, or WebP).');
         return;
       }
 
       // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File too large', {
-          description: 'Image size must be less than 5MB',
-          duration: 3000,
-        });
+        notify.error('File too large. Image size must be less than 5MB.');
         return;
       }
 
@@ -194,7 +188,7 @@ export const ImageCropperModal = ({
           <CardTitle>Crop & Adjust Profile Picture</CardTitle>
           <button
             onClick={onCancel}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-muted-foreground hover:text-foreground"
           >
             <X className="w-5 h-5" />
           </button>
@@ -202,11 +196,11 @@ export const ImageCropperModal = ({
         <CardContent className="pt-6">
           {/* Preview Canvas */}
           <div className="mb-6">
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-muted-foreground mb-3">
               Drag to reposition • Scroll to zoom • Use slider to adjust
             </p>
             <div
-              className="bg-gray-100 rounded-lg overflow-hidden cursor-move relative"
+              className="bg-muted rounded-lg overflow-hidden cursor-move relative"
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
@@ -225,8 +219,8 @@ export const ImageCropperModal = ({
             {/* Zoom Control */}
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <ZoomIn className="w-4 h-4 text-gray-600" />
-                <label className="text-sm font-semibold text-gray-700">
+                <ZoomIn className="w-4 h-4 text-muted-foreground" />
+                <label className="text-sm font-semibold text-foreground">
                   Zoom: {zoom.toFixed(2)}x
                 </label>
               </div>
@@ -244,8 +238,8 @@ export const ImageCropperModal = ({
             {/* Rotation Control */}
             <div>
               <div className="flex items-center gap-3 mb-3">
-                <RotateCcw className="w-4 h-4 text-gray-600" />
-                <label className="text-sm font-semibold text-gray-700">
+                <RotateCcw className="w-4 h-4 text-muted-foreground" />
+                <label className="text-sm font-semibold text-foreground">
                   Rotation: {rotation}°
                 </label>
               </div>
@@ -261,8 +255,8 @@ export const ImageCropperModal = ({
             </div>
 
             {/* Info Text */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-700">
+            <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+              <p className="text-xs text-primary">
                 💡 <strong>Tip:</strong> The white circle shows where your image will be cropped. Adjust until you're happy with how you look!
               </p>
             </div>
@@ -294,7 +288,7 @@ export const ImageCropperModal = ({
             </Button>
             <Button
               onClick={handleCropComplete}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex-1"
             >
               Crop & Upload
             </Button>

@@ -24,9 +24,10 @@ import {
   useRejectListing,
   useRoleRequests,
   useTriggerMarketUpdate,
-} from "@/services/api/adminAuditHooks";
+} from "@/hooks/api/admin/AdminAuditHooks";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { notify } from "@/lib/notifications";
 import { apiGet, apiPatch } from "@/services/api/apiClient";
 
 function peso(value) {
@@ -261,8 +262,8 @@ export default function AdminAuditDashboard() {
   return (
     <div className="mx-auto w-full max-w-7xl p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Audit Dashboard</h1>
-        <p className="text-gray-500">Manage property listings and security flags.</p>
+        <h1 className="text-3xl font-bold text-foreground tracking-tight">Audit Dashboard</h1>
+        <p className="text-muted-foreground">Manage property listings and security flags.</p>
       </div>
 
       <Tabs defaultValue="UNDER_REVIEW" onValueChange={setActiveTab} className="w-full">
@@ -427,7 +428,7 @@ export default function AdminAuditDashboard() {
                             onClick={() =>
                               approveRoleMutation.mutate(req.id, {
                                 onSuccess: () =>
-                                  toast.success(
+                                  notify.success(
                                     `${req.requested_role} verified. Tiered cooldown now uses verified rate.`,
                                   ),
                               })
@@ -441,7 +442,7 @@ export default function AdminAuditDashboard() {
                             variant="destructive"
                             onClick={() =>
                               rejectRoleMutation.mutate(req.id, {
-                                onSuccess: () => toast.success(`${req.requested_role} request rejected.`),
+                                onSuccess: () => notify.success(`${req.requested_role} request rejected.`),
                               })
                             }
                             disabled={approveRoleMutation.isPending || rejectRoleMutation.isPending}
@@ -473,8 +474,8 @@ export default function AdminAuditDashboard() {
           <Button
             onClick={() =>
               triggerMarketMutation.mutate(undefined, {
-                onSuccess: (res) => toast.success(res?.detail || "Market update complete."),
-                onError: (err) => toast.error(err?.message || "Failed to trigger market update."),
+                onSuccess: (res) => notify.success(res?.detail || "Market update complete."),
+                onError: (err) => notify.error(err?.message || "Failed to trigger market update."),
               })
             }
             disabled={triggerMarketMutation.isPending}

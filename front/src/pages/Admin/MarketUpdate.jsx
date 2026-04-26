@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { useAuth } from "@/services/api/useAuth";
-import { apiPost } from "@/services/api/apiClient";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
+import { apiPost } from "@/hooks/api/apiClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";

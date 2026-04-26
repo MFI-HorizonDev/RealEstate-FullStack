@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useProperties } from "@/services/api/useProperties";
-import { useMunicipalities } from "@/services/api/useMunicipalities";
-import { useAuth } from "@/services/api/useAuth";
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
+import { useMunicipalities } from "@/hooks/api/municipalities/UseGetMunicipalities";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
+import { BASE_URL } from "@/hooks/api/config";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -23,12 +24,12 @@ const LISTING_TYPES = [
   { value: "SALE", label: "For Sale" },
   { value: "RENT", label: "For Rent" },
 ];
-const IMAGE_PLACEHOLDER = "https://via.placeholder.com/800x600?text=No+Image+Available";
+const IMAGE_PLACEHOLDER = `${BASE_URL}/media/propertyimg/default.jpg`;
 
 function resolveImageSrc(imageValue) {
   if (typeof imageValue !== "string" || !imageValue.trim()) return IMAGE_PLACEHOLDER;
   if (imageValue.startsWith("http")) return imageValue;
-  if (imageValue.startsWith("/")) return `http://127.0.0.1:8000${imageValue}`;
+  if (imageValue.startsWith("/")) return `${BASE_URL}${imageValue}`;
   return imageValue;
 }
 
@@ -119,21 +120,21 @@ export default function AllProperties() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col md:flex-row gap-8">
 
         {/* ── Sidebar Filters ── */}
         <div className="w-full md:w-64 flex-shrink-0">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-24">
+          <div className="bg-card p-6 rounded-xl shadow-sm border border-border sticky top-24">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-blue-800" />
-                <h3 className="font-bold text-gray-900 text-lg">Filters</h3>
+                <Filter className="w-5 h-5 text-primary" />
+                <h3 className="font-bold text-foreground text-lg">Filters</h3>
               </div>
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 transition"
+                  className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition"
                 >
                   <X className="w-3 h-3" /> Clear all
                 </button>
@@ -144,10 +145,10 @@ export default function AllProperties() {
               {/* Max Price */}
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Max Price
                   </Label>
-                  <span className="text-xs font-bold text-blue-800">
+                  <span className="text-xs font-bold text-primary">
                     {maxPrice >= 50000000 ? "Any" : `₱${(maxPrice / 1000000).toFixed(1)}M`}
                   </span>
                 </div>
@@ -158,9 +159,9 @@ export default function AllProperties() {
                   step="500000"
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-700"
+                  className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
                 />
-                <div className="flex justify-between text-xs text-gray-400">
+                <div className="flex justify-between text-xs text-muted-foreground">
                   <span>₱1M</span>
                   <span>₱50M+</span>
                 </div>
@@ -168,11 +169,11 @@ export default function AllProperties() {
 
               {/* Location / Municipality */}
               <div className="space-y-3">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Location
                 </Label>
                 <Select value={selectedMunicipality} onValueChange={setSelectedMunicipality}>
-                  <SelectTrigger className="h-10 border-gray-200 text-sm">
+                  <SelectTrigger className="h-10 border-border bg-background text-sm">
                     <SelectValue placeholder="Any Location" />
                   </SelectTrigger>
                   <SelectContent>
@@ -188,11 +189,11 @@ export default function AllProperties() {
 
               {/* Listing Type */}
               <div className="space-y-3">
-                <Label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                   Listing Type
                 </Label>
                 <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="h-10 border-gray-200 text-sm">
+                  <SelectTrigger className="h-10 border-border bg-background text-sm">
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent>
@@ -208,7 +209,7 @@ export default function AllProperties() {
 
               <Button
                 onClick={applyFilters}
-                className="w-full bg-blue-800 hover:bg-blue-900 text-white flex items-center justify-center gap-2"
+                className="w-full bg-primary hover:opacity-90 text-primary-foreground flex items-center justify-center gap-2"
               >
                 <Search className="w-4 h-4" />
                 Apply Filters
@@ -221,13 +222,13 @@ export default function AllProperties() {
         <div className="flex-1">
           <div className="mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">Explore Properties</h1>
-              <p className="text-gray-500 text-sm">
+              <h1 className="text-3xl font-bold text-foreground mb-1">Explore Properties</h1>
+              <p className="text-muted-foreground text-sm">
                 {isLoading
                   ? "Loading properties..."
                   : `Showing ${filtered.length}${filtered.length !== properties.length ? ` of ${properties.length}` : ""} properties`}
                 {hasActiveFilters && !isLoading && (
-                  <span className="ml-2 bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-xs font-semibold">
+                  <span className="ml-2 bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold">
                     Filtered
                   </span>
                 )}
@@ -236,7 +237,7 @@ export default function AllProperties() {
             
             {!isAuthLoading && (isOwner || isAdmin || isAgent) && (
               <div className="flex items-center gap-4">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-gray-100 p-1 rounded-lg">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-muted p-1 rounded-lg">
                   <TabsList className="bg-transparent h-9">
                     <TabsTrigger value="ACTIVE" className="px-4 text-xs font-bold">Active</TabsTrigger>
                     <TabsTrigger value="UNDER_REVIEW" className="px-4 text-xs font-bold">Pending</TabsTrigger>
@@ -257,25 +258,25 @@ export default function AllProperties() {
 
           {isLoading && (
             <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-800" />
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
             </div>
           )}
 
           {isError && (
-            <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-100">
+            <div className="bg-destructive/10 text-destructive p-4 rounded-lg border border-destructive/20">
               Failed to load properties: {error?.message}
             </div>
           )}
 
           {!isLoading && filtered.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900">No properties match your filters</h3>
-              <p className="text-gray-500 mt-1">Try adjusting your search criteria.</p>
+            <div className="text-center py-20 bg-card rounded-xl border border-border shadow-sm">
+              <Search className="w-12 h-12 text-muted mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground">No properties match your filters</h3>
+              <p className="text-muted-foreground mt-1">Try adjusting your search criteria.</p>
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="mt-4 text-blue-700 font-semibold hover:underline text-sm"
+                  className="mt-4 text-primary font-semibold hover:underline text-sm"
                 >
                   Clear all filters
                 </button>
@@ -293,8 +294,8 @@ export default function AllProperties() {
 
               return (
                 <Link to={`/properties/${property.id}`} key={property.id} className="block group">
-                  <Card className="overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300 h-full flex flex-col bg-white">
-                    <div className="relative h-60 bg-gray-100 overflow-hidden">
+                  <Card className="overflow-hidden border border-border hover:shadow-xl transition-all duration-300 h-full flex flex-col bg-card">
+                    <div className="relative h-60 bg-muted overflow-hidden">
                       {hasImages ? (
                         <img
                           src={resolveImageSrc(property.images?.[imgIdx]?.image)}
@@ -306,9 +307,11 @@ export default function AllProperties() {
                           alt={property.property_name}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                          <span className="text-gray-400 font-medium">No Image</span>
-                        </div>
+                        <img
+                          src={IMAGE_PLACEHOLDER}
+                          alt="No image available"
+                          className="w-full h-full object-cover"
+                        />
                       )}
 
                       {/* Status badge */}
@@ -320,7 +323,7 @@ export default function AllProperties() {
                           {property.status}
                         </span>
                         {property.type && (
-                          <span className="bg-blue-900/80 backdrop-blur-sm text-white px-2 py-1 rounded-md text-[10px] font-bold uppercase">
+                          <span className="bg-blue-950/80 backdrop-blur-sm text-white px-2 py-1 rounded-md text-[10px] font-bold uppercase">
                             {listingLabel}
                           </span>
                         )}
@@ -331,13 +334,13 @@ export default function AllProperties() {
                         <>
                           <button
                             onClick={(e) => prevImg(e, property.id, property.images.length)}
-                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-gray-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/70 hover:bg-background text-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                           >
                             <ChevronLeft className="w-5 h-5" />
                           </button>
                           <button
                             onClick={(e) => nextImg(e, property.id, property.images.length)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/70 hover:bg-white text-gray-800 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/70 hover:bg-background text-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
                           >
                             <ChevronRight className="w-5 h-5" />
                           </button>
@@ -346,35 +349,35 @@ export default function AllProperties() {
                     </div>
 
                     <CardContent className="p-5 flex flex-col flex-grow">
-                      <h3 className="font-bold text-gray-900 text-lg mb-1 truncate group-hover:text-blue-800 transition-colors">
+                      <h3 className="font-bold text-foreground text-lg mb-1 truncate group-hover:text-primary transition-colors">
                         {property.property_name || `Property ${property.id}`}
                       </h3>
-                      <p className="text-gray-500 text-sm mb-1 truncate">
+                      <p className="text-muted-foreground text-sm mb-1 truncate">
                         {property.property_address || "Address not provided"}
                       </p>
                       {property.property_municipality?.municipality_name && (
-                        <p className="text-blue-700 text-[10px] font-bold tracking-widest uppercase mb-3">
+                        <p className="text-primary text-[10px] font-bold tracking-widest uppercase mb-3">
                           📍 {property.property_municipality.municipality_name}
                         </p>
                       )}
 
-                      <div className="mt-auto pt-4 border-t border-gray-100 flex items-end justify-between">
+                      <div className="mt-auto pt-4 border-t border-border flex items-end justify-between">
                         <div>
-                          <p className="text-xs text-gray-500 font-medium mb-1">Asking Price</p>
-                          <p className="text-xl font-bold text-blue-900">
+                          <p className="text-xs text-muted-foreground font-medium mb-1">Asking Price</p>
+                          <p className="text-xl font-bold text-primary">
                             {formatPropertyPrice(property)}
                           </p>
                         </div>
-                        <div className="flex gap-3 text-sm text-gray-600 font-medium">
+                        <div className="flex gap-3 text-sm text-muted-foreground font-medium">
                           {property.num_bedrooms > 0 && (
                             <div className="flex flex-col items-end">
-                              <span className="text-xs text-gray-400">Beds</span>
+                              <span className="text-xs text-muted-foreground/60">Beds</span>
                               <span>{property.num_bedrooms}</span>
                             </div>
                           )}
                           {property.num_bathrooms > 0 && (
                             <div className="flex flex-col items-end">
-                              <span className="text-xs text-gray-400">Baths</span>
+                              <span className="text-xs text-muted-foreground/60">Baths</span>
                               <span>{property.num_bathrooms}</span>
                             </div>
                           )}

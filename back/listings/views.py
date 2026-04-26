@@ -67,19 +67,29 @@ class PropertyRetrieveView(generics.RetrieveAPIView):
     authentication_classes = [CookieJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-# Update property (owner/agent only)
+# Update property (owner/agent/admin only)
 class PropertyUpdateView(generics.UpdateAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertyCreateSerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
-# Delete property (admin only)
+    def get_object(self):
+        obj = super().get_object()
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+# Delete property (owner/agent/admin only)
 class PropertyDeleteView(generics.DestroyAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
     authentication_classes = [CookieJWTAuthentication]
-    permission_classes = [IsAdminGroup]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
+
+    def get_object(self):
+        obj = super().get_object()
+        self.check_object_permissions(self.request, obj)
+        return obj
 
 # Admin-only: approve or reject a flagged listing by updating its status
 class AdminPropertyStatusView(APIView):
@@ -206,37 +216,31 @@ class PropertyImageListView(generics.ListAPIView):
 class PropertyImageCreateView(generics.CreateAPIView):
     serializer_class = PropertyImageCreateSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
     def perform_create(self, serializer):
         property_id = self.kwargs['property_id']
-        property_instance = get_object_or_404(Property, pk=property_id)
-        if self.request.user == property_instance.owner or (
-            hasattr(property_instance, 'agent') and self.request.user == property_instance.agent
-        ):
-            serializer.save(property_id=property_id)
-        else:
-            raise permissions.PermissionDenied("You don't have permission to add images to this property.")
+        serializer.save(property_id=property_id)
 
 # Retrieve, Update, Delete each image separately
 class PropertyImageRetrieveView(generics.RetrieveAPIView):
     queryset = PropertyImage.objects.all()
     serializer_class = PropertyImageSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
 class PropertyImageUpdateView(generics.UpdateAPIView):
     queryset = PropertyImage.objects.all()
     serializer_class = PropertyImageSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
-# Delete property image (admin only)
+# Delete property image (owner only, SuperAdmin override)
 class PropertyImageDeleteView(generics.DestroyAPIView):
     queryset = PropertyImage.objects.all()
     serializer_class = PropertyImageSerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminGroup]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
 # List all municipalities
 class MunicipalityListView(generics.ListAPIView):
@@ -288,47 +292,34 @@ class AmenityListView(generics.ListAPIView):
 class AmenityCreateView(generics.CreateAPIView):
     serializer_class = AmenitySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminOrAgentOrOwnerGroup]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
     def perform_create(self, serializer):
         if 'property_id' in self.kwargs:
-            property_instance = get_object_or_404(Property, pk=self.kwargs['property_id'])
-            if (self.request.user == property_instance.owner or
-                (hasattr(property_instance, 'agent') and self.request.user == property_instance.agent)):
-                serializer.save(property=property_instance, added_by=self.request.user)
-            else:
-                raise permissions.PermissionDenied("You don't have permission to add amenities to this property.")
+            property_instance = Property.objects.get(pk=self.kwargs['property_id'])
+            serializer.save(property=property_instance, added_by=self.request.user)
         else:
-            property_instance = serializer.validated_data.get('property')
-            if property_instance:
-                if (self.request.user == property_instance.owner or
-                    (hasattr(property_instance, 'agent') and self.request.user == property_instance.agent)):
-                    serializer.save(added_by=self.request.user)
-                else:
-                    raise permissions.PermissionDenied("You don't have permission to add amenities to this property.")
-            else:
-                serializer.save(added_by=self.request.user)
-
+            serializer.save(added_by=self.request.user)
 # Retrieve amenity
 class AmenityRetrieveView(generics.RetrieveAPIView):
     queryset = Amenity.objects.all()
     serializer_class = AmenitySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
 # Update amenity
 class AmenityUpdateView(generics.UpdateAPIView):
     queryset = Amenity.objects.all()
     serializer_class = AmenitySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsOwnerOrAgentOrReadOnly]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
-# Delete amenity (admin only)
+# Delete amenity (owner only, SuperAdmin override)
 class AmenityDeleteView(generics.DestroyAPIView):
     queryset = Amenity.objects.all()
     serializer_class = AmenitySerializer
     authentication_classes = [JWTAuthentication]
-    permission_classes = [IsAdminGroup]
+    permission_classes = [IsPropertyOwnerOrSuperAdmin]
 
 class ValuationPreviewView(generics.RetrieveAPIView):
     queryset = Property.objects.all()
@@ -339,6 +330,45 @@ class ValuationPreviewView(generics.RetrieveAPIView):
         property_obj = self.get_object()
         breakdown = PricingEngine().calculate_valuation(property_obj)
         return Response(breakdown)
+
+class ValuationPreviewPOSTView(APIView):
+    """Returns CMA valuation for unsaved property data."""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = PropertyCreateSerializer(data=request.data)
+        # We don't necessarily need it to be fully valid (e.g. owner/agent missing)
+        # but we need enough data for CMA.
+        # However, PropertyCreateSerializer might have many requirements.
+        # Let's manually instantiate a Property object for the engine.
+        
+        data = request.data
+        try:
+            municipality_id = data.get('property_municipality')
+            if not municipality_id:
+                return Response({"detail": "Municipality is required for valuation."}, status=400)
+            
+            municipality = Municipality.objects.get(pk=municipality_id)
+            
+            # Create a mock property object
+            mock_property = Property(
+                property_municipality=municipality,
+                category=data.get('category', 'HOUSE_AND_LOT'),
+                condition=data.get('condition', 'GOOD'),
+                location_quality=data.get('location_quality', 'SUBURBAN'),
+                property_size=data.get('property_size', 0),
+                building_size=data.get('building_size', 0),
+                type=data.get('type', 'SALE')
+            )
+            
+            # For amenities, we'd need to mock them too if we want them in CMA
+            # But maybe for preview we just skip them or use a simple sum
+            
+            breakdown = PricingEngine().calculate_valuation(mock_property)
+            return Response(breakdown)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=400)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -400,11 +430,9 @@ class UserProfileView(generics.RetrieveAPIView):
     def get_object(self):
         return self.request.user
 
-    def retrieve(self, request, *args, **kwargs):
-        user = self.get_object()
-        # Ensure user has a profile
+    @staticmethod
+    def build_profile_payload(user):
         profile, created = UserProfile.objects.get_or_create(user=user)
-        
         return Response({
             'id': user.id,
             'username': user.username,
@@ -425,6 +453,10 @@ class UserProfileView(generics.RetrieveAPIView):
             }
         })
 
+    def retrieve(self, request, *args, **kwargs):
+        user = self.get_object()
+        return self.build_profile_payload(user)
+
 
 class UserProfileUpdateView(generics.UpdateAPIView):
     """Update user profile with image upload"""
@@ -440,7 +472,38 @@ class UserProfileUpdateView(generics.UpdateAPIView):
         return UserProfileUpdateSerializer
 
     def perform_update(self, serializer):
-        serializer.save()
+        profile = serializer.save()
+        profile_fields = ["bio", "phone_number", "address", "city", "state", "country", "zipcode"]
+        pending_updates = []
+        for field in profile_fields:
+            raw_value = self.request.data.get(field)
+            if raw_value is not None:
+                setattr(profile, field, raw_value)
+                pending_updates.append(field)
+        if pending_updates:
+            profile.save(update_fields=pending_updates + ["updated_at"])
+        raw_email = self.request.data.get("email")
+        if raw_email is not None:
+            self.request.user.email = raw_email
+            self.request.user.save(update_fields=["email"])
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", True)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        profile_fields = ["bio", "phone_number", "address", "city", "state", "country", "zipcode"]
+        pending_updates = []
+        for field in profile_fields:
+            raw_value = request.data.get(field)
+            if raw_value is not None:
+                setattr(instance, field, raw_value)
+                pending_updates.append(field)
+        if pending_updates:
+            instance.save(update_fields=pending_updates + ["updated_at"])
+        instance.refresh_from_db()
+        return UserProfileView.build_profile_payload(request.user)
 
 
 class UserProfileRetrieveView(generics.RetrieveAPIView):

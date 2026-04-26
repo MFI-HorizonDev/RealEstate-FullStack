@@ -2,8 +2,9 @@
  * API Client with automatic authentication header handling
  */
 
-const BASE_URL = "http://127.0.0.1:8000/api";
-const TOKEN_REFRESH_URL = `${BASE_URL}/token/refresh/`;
+import { API_BASE_URL, BASE_URL } from "./config";
+
+const TOKEN_REFRESH_URL = `${API_BASE_URL}/token/refresh/`;
 let tokenRefreshPromise = null;
 
 /**
@@ -12,6 +13,8 @@ let tokenRefreshPromise = null;
 const clearTokens = () => {
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
+  document.cookie = "access=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  document.cookie = "refresh=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 };
 
 /**
@@ -65,6 +68,7 @@ const refreshAccessToken = async () => {
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
+      "ngrok-skip-browser-warning": "true",
     },
     body: JSON.stringify({ refresh: refreshToken }),
   });
@@ -75,9 +79,13 @@ const refreshAccessToken = async () => {
     return null;
   }
 
-  localStorage.setItem("access", data.access);
+  // Do NOT store tokens in localStorage — rely on httpOnly cookies set by the server.
+  // If the server returns tokens in the response body (non-httpOnly flow), store only in cookie.
+  if (isTokenLike(data?.access)) {
+    document.cookie = `access=${encodeURIComponent(data.access)}; path=/; SameSite=Strict`;
+  }
   if (isTokenLike(data?.refresh)) {
-    localStorage.setItem("refresh", data.refresh);
+    document.cookie = `refresh=${encodeURIComponent(data.refresh)}; path=/; SameSite=Strict`;
   }
 
   return data.access;
@@ -104,6 +112,7 @@ const getValidAccessToken = async () => {
 const buildHeaders = (accessToken, extraHeaders = {}) => {
   const headers = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
     ...extraHeaders,
   };
 
@@ -118,7 +127,8 @@ const buildHeaders = (accessToken, extraHeaders = {}) => {
  * Make authenticated API request
  */
 export const apiRequest = async (endpoint, options = {}) => {
-  const url = `${BASE_URL}${endpoint}`;
+  const url = `${API_BASE_URL}${endpoint}`;
+  assertTrustedUrl(url);
   console.log(`API Request: ${options.method || "GET"} ${url}`);
 
   try {
@@ -182,6 +192,38 @@ export const apiRequest = async (endpoint, options = {}) => {
     console.error(`API Error: ${error.message}`);
     throw error;
   }
+};
+
+const TRUSTED_ORIGIN = new URL(BASE_URL).origin;
+
+/**
+ * Validate a URL is within the trusted backend origin before fetching.
+ * Throws if the URL points outside the allowed host.
+ */
+const assertTrustedUrl = (url) => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin !== TRUSTED_ORIGIN) {
+      throw new Error(`Untrusted request origin: ${parsed.origin}`);
+    }
+  } catch (e) {
+    if (e.message.startsWith("Untrusted")) throw e;
+    throw new Error(`Invalid URL: ${url}`);
+  }
+};
+
+/**
+ * Raw fetch with auth + ngrok headers (for multipart/FormData requests)
+ */
+export const fetchWithAuth = (url, options = {}) => {
+  assertTrustedUrl(url);
+  const token = getStoredToken("access");
+  const headers = {
+    "ngrok-skip-browser-warning": "true",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...options.headers,
+  };
+  return fetch(url, { ...options, headers });
 };
 
 /**

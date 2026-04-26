@@ -1,5 +1,5 @@
 import { Navigate } from "react-router";
-import { useAuth } from "@/services/api/useAuth";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 
 export default function GuestOnlyRoute({ children }) {
   const { isLoggedIn, isLoading } = useAuth();

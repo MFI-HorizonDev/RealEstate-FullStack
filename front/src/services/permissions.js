@@ -25,7 +25,7 @@ export const canCreateListing = (user) => {
  */
 export const canEditListing = (user, listingOwnerId) => {
   if (!user) return false;
-  return isSuperAdmin(user) || user.id === listingOwnerId || hasRole(user, "Agent");
+  return isSuperAdmin(user) || user.id === listingOwnerId;
 };
 
 /**

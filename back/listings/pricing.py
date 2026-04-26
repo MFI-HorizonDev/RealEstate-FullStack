@@ -3,44 +3,35 @@ from decimal import Decimal
 from .utils import get_cached_market_buffer, get_cached_demand_signal
 
 
+from decimal import Decimal
+from django.apps import apps
+from django.db.models import Avg, Q
+
+from .utils import get_cached_market_buffer
+
 class PricingEngine:
-    """Dynamic valuation with market buffer, demand, and competitive pressure."""
+    """
+    Comparable Market Analysis (CMA) System.
+    Calculates valuation based on similar local properties and specific adjustments.
+    """
 
     BASIC_CAP = 100000
     LUXURY_CAP = 250000
-    AMENITY_DECAY_STEP = Decimal("0.22")
+    AMENITY_DECAY_STEP = Decimal("0.20")
 
-    CATEGORY_CURVES = {
-        "HOUSE_AND_LOT": {
-            "land_weight": Decimal("1.00"),
-            "building_multiplier": Decimal("1.25"),
-            "demand_sensitivity": Decimal("1.00"),
-            "competition_sensitivity": Decimal("1.00"),
-        },
-        "LOT": {
-            "land_weight": Decimal("1.05"),
-            "building_multiplier": Decimal("0.00"),
-            "demand_sensitivity": Decimal("0.90"),
-            "competition_sensitivity": Decimal("1.10"),
-        },
-        "APARTMENT": {
-            "land_weight": Decimal("0.65"),
-            "building_multiplier": Decimal("1.40"),
-            "demand_sensitivity": Decimal("1.10"),
-            "competition_sensitivity": Decimal("1.15"),
-        },
-        "CONDO": {
-            "land_weight": Decimal("0.55"),
-            "building_multiplier": Decimal("1.60"),
-            "demand_sensitivity": Decimal("1.20"),
-            "competition_sensitivity": Decimal("1.20"),
-        },
-        "COMMERCIAL_SPACE": {
-            "land_weight": Decimal("1.20"),
-            "building_multiplier": Decimal("1.75"),
-            "demand_sensitivity": Decimal("1.15"),
-            "competition_sensitivity": Decimal("1.30"),
-        },
+    # Adjustment Multipliers
+    CONDITION_MODIFIERS = {
+        "NEW": Decimal("1.15"),   # +15% for brand new/excellent
+        "GOOD": Decimal("1.00"),  # Baseline
+        "FAIR": Decimal("0.85"),  # -15% for fair/average
+        "POOR": Decimal("0.70"),  # -30% for needs renovation
+    }
+
+    LOCATION_MODIFIERS = {
+        "PREMIUM": Decimal("1.25"),  # +25% for CBD/Elite areas
+        "URBAN": Decimal("1.10"),    # +10% for central urban
+        "SUBURBAN": Decimal("1.00"), # Baseline
+        "RURAL": Decimal("0.90"),    # -10% for rural/remote
     }
 
     def _quantize_int(self, value):
@@ -48,111 +39,111 @@ class PricingEngine:
             value = Decimal(str(value))
         return int(value.quantize(Decimal("1")))
 
-    def _capped_amenity_sum(self, property_obj):
-        amenity_values = []
-        for amenity in property_obj.amenities.all().order_by("-price"):
-            if amenity.amenity_type == "Basic":
-                amenity_values.append(Decimal(str(min(amenity.price, self.BASIC_CAP))))
-            elif amenity.amenity_type == "Luxury":
-                amenity_values.append(Decimal(str(min(amenity.price, self.LUXURY_CAP))))
-            else:
-                amenity_values.append(Decimal(str(amenity.price)))
+    def _get_similar_properties(self, property_obj):
+        Property = apps.get_model('listings', 'Property')
+        
+        # Criteria: same municipality, same category, same type (SALE), ACTIVE or SOLD
+        similar = Property.objects.filter(
+            property_municipality=property_obj.property_municipality,
+            category=property_obj.category,
+            type="SALE"
+        ).filter(Q(status="ACTIVE") | Q(status="SOLD")).exclude(pk=property_obj.pk)
+        
+        # Take the most recent 5 for a good sample
+        return similar.order_by("-created_at")[:5]
 
+    def _calculate_amenity_impact(self, property_obj):
+        amenities = property_obj.amenities.all().order_by("-price")
         total = Decimal("0")
-        for idx, amenity_value in enumerate(amenity_values):
+        for idx, amenity in enumerate(amenities):
+            val = Decimal(str(amenity.price))
+            if amenity.amenity_type == "Basic":
+                val = min(val, Decimal(str(self.BASIC_CAP)))
+            elif amenity.amenity_type == "Luxury":
+                val = min(val, Decimal(str(self.LUXURY_CAP)))
+            
             decay = Decimal("1") + (self.AMENITY_DECAY_STEP * Decimal(idx))
-            total += amenity_value / decay
+            total += val / decay
         return total
-
-    def _get_subdivision_multiplier(self, property_obj):
-        # if  a subdivision_multiplier field is added to Property later, it will be used
-        return getattr(property_obj, "subdivision_multiplier", Decimal("1.0"))
 
     def calculate_valuation(self, property_obj):
         """
-        Returns a detailed valuation breakdown.
+        Performs Comparable Market Analysis (CMA) and returns a detailed breakdown.
         """
-        municipality = property_obj.property_municipality
-        if not municipality:
-            return {
-                "base_price": 0,
-                "building_price": 0,
-                "amenity_impact": 0,
-                "demand_adjustment": 0,
-                "competitive_adjustment": 0,
-                "subtotal_before_subdivision": 0,
-                "subdivision_multiplier": 1.0,
-                "estimated_total": 0,
-            }
-
         if getattr(property_obj, "type", None) == "RENT":
             fixed_price = property_obj.price or 0
             return {
-                "base_price": 0,
-                "building_price": 0,
-                "amenity_impact": 0,
-                "demand_adjustment": 0,
-                "competitive_adjustment": 0,
-                "subtotal_before_subdivision": int(fixed_price),
-                "subdivision_multiplier": 1.0,
-                "estimated_total": int(fixed_price),
-                "recommendation_band": {
-                    "min": int(fixed_price),
-                    "max": int(fixed_price),
-                },
+                "recommended_price": int(fixed_price),
+                "price_per_sqm": 0,
+                "explanation": "Rent listings use manual pricing and are not subject to CMA valuation.",
+                "comparables": [],
+                "adjustments": {"condition": 1.0, "location": 1.0},
+                "recommendation_band": {"min": int(fixed_price), "max": int(fixed_price)}
             }
 
-        market_rate = get_cached_market_buffer(municipality)
-        if market_rate is None:
-            market_rate = municipality.price_per_sqm
-        market_rate = Decimal(str(market_rate))
+        # 1. Fetch Comparables
+        comps = self._get_similar_properties(property_obj)
+        comp_data = []
+        avg_comp_sqm_price = Decimal("0")
+        
+        if comps.count() >= 3:
+            total_sqm_price = Decimal("0")
+            for c in comps:
+                sqm_price = Decimal(str(c.price)) / Decimal(str(max(c.property_size, 1)))
+                total_sqm_price += sqm_price
+                comp_data.append({
+                    "id": c.id,
+                    "name": c.property_name,
+                    "price": c.price,
+                    "sqm": c.property_size,
+                    "price_per_sqm": int(sqm_price)
+                })
+            avg_comp_sqm_price = total_sqm_price / Decimal(str(len(comps)))
+            explanation_source = f"Based on {len(comps)} similar properties in {property_obj.property_municipality}."
+        else:
+            # Fallback to municipality base rate if not enough comparables
+            avg_comp_sqm_price = Decimal(str(get_cached_market_buffer(property_obj.property_municipality)))
+            explanation_source = f"Insufficient local comparables (<3). Falling back to {property_obj.property_municipality} market baseline."
 
-        category = getattr(property_obj, "category", "HOUSE_AND_LOT")
-        curve = self.CATEGORY_CURVES.get(category, self.CATEGORY_CURVES["HOUSE_AND_LOT"])
-
-        sqm = property_obj.property_size or 0
-        base_price = market_rate * Decimal(str(sqm)) * curve["land_weight"]
-
-        building_size = getattr(property_obj, "building_size", 0) or 0
-        building_price = market_rate * Decimal(str(building_size)) * curve["building_multiplier"]
-
-        amenity_impact = self._capped_amenity_sum(property_obj)
-
-        pre_adjusted = base_price + building_price + amenity_impact
-
-        demand_signal = get_cached_demand_signal(municipality, category)
-        demand_score = Decimal(str(demand_signal.get("score", 0))) * curve["demand_sensitivity"]
-        demand_adjustment = pre_adjusted * demand_score
-
-        competitive_index = Decimal(str(demand_signal.get("competitive_index", 0)))
-        competitive_score = (
-            Decimal("-1")
-            * competitive_index
-            * curve["competition_sensitivity"]
-            * Decimal("0.08")
+        # 2. Base Valuation
+        base_valuation = avg_comp_sqm_price * Decimal(str(property_obj.property_size))
+        
+        # 3. Adjustments
+        condition_mod = self.CONDITION_MODIFIERS.get(property_obj.condition, Decimal("1.0"))
+        location_mod = self.LOCATION_MODIFIERS.get(property_obj.location_quality, Decimal("1.0"))
+        
+        amenity_impact = self._calculate_amenity_impact(property_obj)
+        
+        # Apply multipliers to base valuation
+        adjusted_valuation = (base_valuation * condition_mod * location_mod) + amenity_impact
+        
+        # 4. Final Recommendation
+        recommended_price = self._quantize_int(adjusted_valuation)
+        
+        # Prepare Explanation
+        cond_label = dict(property_obj.CONDITION_TYPES).get(property_obj.condition, property_obj.condition)
+        loc_label = dict(property_obj.LOCATION_QUALITIES).get(property_obj.location_quality, property_obj.location_quality)
+        
+        explanation = (
+            f"{explanation_source} "
+            f"Market rate: ₱{int(avg_comp_sqm_price):,}/sqm. "
+            f"Adjusted for '{cond_label}' condition ({int((condition_mod-1)*100):+d}%) "
+            f"and '{loc_label}' location ({int((location_mod-1)*100):+d}%). "
+            f"Added ₱{int(amenity_impact):,} for features/amenities."
         )
-        competitive_adjustment = pre_adjusted * competitive_score
-
-        subtotal_before_subdivision = (
-            pre_adjusted + demand_adjustment + competitive_adjustment
-        )
-        subdivision_multiplier = self._get_subdivision_multiplier(property_obj)
-        if not isinstance(subdivision_multiplier, Decimal):
-            subdivision_multiplier = Decimal(str(subdivision_multiplier))
-
-        estimated_total = (subtotal_before_subdivision * subdivision_multiplier).quantize(Decimal("1"))
 
         return {
-            "base_price": self._quantize_int(base_price),
-            "building_price": self._quantize_int(building_price),
-            "amenity_impact": self._quantize_int(amenity_impact),
-            "demand_adjustment": self._quantize_int(demand_adjustment),
-            "competitive_adjustment": self._quantize_int(competitive_adjustment),
-            "subtotal_before_subdivision": self._quantize_int(subtotal_before_subdivision),
-            "subdivision_multiplier": float(subdivision_multiplier),
-            "estimated_total": int(estimated_total),
-            "recommendation_band": {
-                "min": self._quantize_int(estimated_total * Decimal("0.97")),
-                "max": self._quantize_int(estimated_total * Decimal("1.03")),
+            "recommended_price": recommended_price,
+            "price_per_sqm": int(avg_comp_sqm_price),
+            "suggested_range": {
+                "min": self._quantize_int(adjusted_valuation * Decimal("0.95")),
+                "max": self._quantize_int(adjusted_valuation * Decimal("1.05")),
             },
+            "explanation": explanation,
+            "comparables": comp_data,
+            "adjustments": {
+                "condition": float(condition_mod),
+                "location": float(location_mod),
+                "amenity_impact": int(amenity_impact)
+            }
         }

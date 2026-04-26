@@ -1,6 +1,6 @@
 import React from "react";
-import { useAuth } from "@/services/api/useAuth";
-import { hasRole, hasAnyRole, isSuperAdmin } from "@/services/api/useAuth";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
+import { hasRole, hasAnyRole, isSuperAdmin } from "@/hooks/api/authentication/useAuth";
 
 /**
  * Component that renders children only if user has required role(s)

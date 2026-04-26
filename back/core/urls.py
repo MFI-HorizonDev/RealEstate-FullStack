@@ -1,8 +1,13 @@
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework_simplejwt.views import TokenVerifyView
+from django.views.generic import TemplateView
+from django.views.static import serve
+from rest_framework_simplejwt.views import (
+    TokenRefreshView,
+    TokenVerifyView
+)
 from listings.views import *
 from tours.views import *
 from deals.views import *
@@ -37,6 +42,7 @@ urlpatterns = [
     path('api/properties/<int:pk>/admin-agent/', AdminPropertyAgentAssignView.as_view(), name='property-admin-agent-assign'),
     path('api/admin/agents/', AdminAgentListView.as_view(), name='admin-agent-list'),
     path('api/properties/<int:pk>/valuation-preview/', ValuationPreviewView.as_view(), name='property-valuation-preview'),
+    path('api/properties/valuation-preview/', ValuationPreviewPOSTView.as_view(), name='property-valuation-preview-post'),
 
     # Property Images
     path('api/properties/<int:property_id>/images/', PropertyImageListView.as_view(), name='property-image-list'),
@@ -106,4 +112,14 @@ urlpatterns = [
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static('assets/', document_root=settings.FRONTEND_DIST_DIR / 'assets')
+    urlpatterns += [
+        path('vite.svg', serve, {'document_root': settings.FRONTEND_DIST_DIR, 'path': 'vite.svg'}),
+    ]
+
+urlpatterns += [
+    re_path(r'^(?!api/|admin/|media/|assets/|static/).*$',
+            TemplateView.as_view(template_name='index.html'),
+            name='frontend'),
+]
 

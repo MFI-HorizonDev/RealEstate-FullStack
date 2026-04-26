@@ -3,6 +3,36 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Global UI/UX stability across mobile/desktop/tablet */
+html,
+body {
+  height: 100%;
+}
+
+body {
+  /* Prevent accidental horizontal overflow causing "blank" screens on mobile */
+  overflow-x: hidden;
+  /* Keep text sizes consistent on iOS */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Media defaults to avoid overflow in narrow viewports */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+/* Utility used in components (prevents missing-class layout issues) */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -80,37 +110,58 @@
 }
 
 .dark {
-  --background: oklch(0.13 0.028 261.692);
-  --foreground: oklch(0.985 0.002 247.839);
-  --card: oklch(0.21 0.034 264.665);
-  --card-foreground: oklch(0.985 0.002 247.839);
-  --popover: oklch(0.21 0.034 264.665);
-  --popover-foreground: oklch(0.985 0.002 247.839);
-  --primary: oklch(0.928 0.006 264.531);
-  --primary-foreground: oklch(0.21 0.034 264.665);
-  --secondary: oklch(0.278 0.033 256.848);
-  --secondary-foreground: oklch(0.985 0.002 247.839);
-  --muted: oklch(0.278 0.033 256.848);
-  --muted-foreground: oklch(0.707 0.022 261.325);
-  --accent: oklch(0.278 0.033 256.848);
-  --accent-foreground: oklch(0.985 0.002 247.839);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.034 264.665);
-  --sidebar-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0.002 247.839);
-  --sidebar-accent: oklch(0.278 0.033 256.848);
-  --sidebar-accent-foreground: oklch(0.985 0.002 247.839);
+  /* Page background: deep navy */
+  --background: oklch(0.14 0.025 264);
+  --foreground: oklch(0.94 0.008 250);
+
+  /* Cards: slightly lighter than background */
+  --card: oklch(0.19 0.030 264);
+  --card-foreground: oklch(0.94 0.008 250);
+
+  /* Popovers / dropdowns */
+  --popover: oklch(0.19 0.030 264);
+  --popover-foreground: oklch(0.94 0.008 250);
+
+  /* Primary: rich indigo — keeps navbar looking intentional in dark mode */
+  --primary: oklch(0.42 0.18 265);
+  --primary-foreground: oklch(0.97 0.003 248);
+
+  /* Secondary: muted indigo surface */
+  --secondary: oklch(0.26 0.040 264);
+  --secondary-foreground: oklch(0.94 0.008 250);
+
+  /* Muted: subtle surface for backgrounds */
+  --muted: oklch(0.24 0.030 264);
+  --muted-foreground: oklch(0.65 0.022 262);
+
+  /* Accent: same as secondary */
+  --accent: oklch(0.26 0.040 264);
+  --accent-foreground: oklch(0.94 0.008 250);
+
+  /* Destructive: warm red */
+  --destructive: oklch(0.65 0.22 22);
+
+  /* Borders & inputs */
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.55 0.12 265);
+
+  /* Charts */
+  --chart-1: oklch(0.55 0.22 265);
+  --chart-2: oklch(0.65 0.17 162);
+  --chart-3: oklch(0.75 0.18 70);
+  --chart-4: oklch(0.60 0.25 304);
+  --chart-5: oklch(0.62 0.24 16);
+
+  /* Sidebar: slightly darker than card */
+  --sidebar: oklch(0.17 0.028 264);
+  --sidebar-foreground: oklch(0.94 0.008 250);
+  --sidebar-primary: oklch(0.55 0.20 265);
+  --sidebar-primary-foreground: oklch(0.97 0.003 248);
+  --sidebar-accent: oklch(0.26 0.040 264);
+  --sidebar-accent-foreground: oklch(0.94 0.008 250);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.551 0.027 264.364);
+  --sidebar-ring: oklch(0.55 0.12 265);
 }
 
 @layer base {
@@ -120,4 +171,29 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Smooth theme transition — prevents jarring flash when toggling */
+html {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+/* Ensure all surfaces transition smoothly */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* But don't slow down interactive elements */
+button,
+a,
+input,
+select,
+textarea {
+  transition-duration: 0.15s;
 }

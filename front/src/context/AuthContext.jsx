@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { BASE_URL } from "@/hooks/api/config";
 
 const AuthContext = createContext(null);
-const BASE_URL = "http://127.0.0.1:8000";
 
 function getAccessTokenFromStorage() {
   const raw = localStorage.getItem("access");
@@ -19,6 +19,7 @@ async function customFetch(url, options = {}) {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      "ngrok-skip-browser-warning": "true",
       ...(options.headers || {}),
     },
   });
@@ -35,9 +36,11 @@ export function AuthProvider({ children }) {
     const refreshAuth = () => setAuthNonce((prev) => prev + 1);
     window.addEventListener("storage", refreshAuth);
     window.addEventListener("auth-changed", refreshAuth);
+    window.addEventListener("profile-updated", refreshAuth);
     return () => {
       window.removeEventListener("storage", refreshAuth);
       window.removeEventListener("auth-changed", refreshAuth);
+      window.removeEventListener("profile-updated", refreshAuth);
     };
   }, []);
 
@@ -111,4 +114,3 @@ export function useAuth() {
   }
   return context;
 }
-

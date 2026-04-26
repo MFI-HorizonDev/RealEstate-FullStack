@@ -1,33 +1,34 @@
 import React from "react";
 import { Link } from "react-router";
-import { useProperties } from "@/services/api/useProperties";
-import { useSales } from "@/services/api/useSales";
-import { useAuth } from "@/services/api/useAuth";
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
+import { useSales } from "@/hooks/api/sales/useSales";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, DollarSign, PlusCircle, TrendingUp, House, MapPin } from "lucide-react";
+import { BASE_URL } from "@/hooks/api/config";
 
 const peso = (v) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(Number(v || 0));
-const IMAGE_PLACEHOLDER = "https://via.placeholder.com/800x600?text=No+Image+Available";
+const IMAGE_PLACEHOLDER = `${BASE_URL}/media/propertyimg/default.jpg`;
 
 function resolveImageSrc(imageValue) {
   if (typeof imageValue !== "string" || !imageValue.trim()) return IMAGE_PLACEHOLDER;
   if (imageValue.startsWith("http")) return imageValue;
-  if (imageValue.startsWith("/")) return `http://127.0.0.1:8000${imageValue}`;
+  if (imageValue.startsWith("/")) return `${BASE_URL}${imageValue}`;
   return imageValue;
 }
 
 function StatusBadge({ status }) {
   const colors = {
-    ACTIVE: "bg-green-100 text-green-800 border-green-200",
-    UNDER_REVIEW: "bg-amber-100 text-amber-800 border-amber-200",
-    REJECTED: "bg-red-100 text-red-800 border-red-200",
-    SOLD: "bg-blue-100 text-blue-800 border-blue-200",
+    ACTIVE: "bg-green-500/10 text-green-600 border-green-500/20",
+    UNDER_REVIEW: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    REJECTED: "bg-red-500/10 text-red-600 border-red-500/20",
+    SOLD: "bg-blue-500/10 text-blue-600 border-blue-500/20",
   };
-  return <Badge variant="outline" className={`${colors[status] || "bg-gray-100 text-gray-700"} text-xs font-semibold`}>{status}</Badge>;
+  return <Badge variant="outline" className={`${colors[status] || "bg-muted text-muted-foreground"} text-xs font-semibold`}>{status}</Badge>;
 }
 
 export default function OwnerDashboard() {
@@ -50,12 +51,12 @@ export default function OwnerDashboard() {
     <div className="max-w-7xl mx-auto py-8 px-4">
       <div className="mb-8 flex items-end justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Owner Dashboard</h1>
-          <p className="text-gray-500 mt-1">Manage your property listings and sales.</p>
+          <h1 className="text-3xl font-bold text-foreground">Owner Dashboard</h1>
+          <p className="text-muted-foreground mt-1">Manage your property listings and sales.</p>
         </div>
         {(isAgent || isOwner || isAdmin) && (
           <Link to="/properties/create">
-            <Button className="bg-blue-800 hover:bg-blue-900 text-white gap-2">
+            <Button className="bg-primary hover:opacity-90 text-primary-foreground gap-2">
               <PlusCircle className="w-4 h-4" /> New Listing
             </Button>
           </Link>
@@ -73,10 +74,10 @@ export default function OwnerDashboard() {
           <Card key={label}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className={`p-2 bg-${color}-50 rounded-lg`}><Icon className={`w-5 h-5 text-${color}-700`} /></div>
+                <div className={`p-2 bg-${color}-500/10 rounded-lg`}><Icon className={`w-5 h-5 text-${color}-600`} /></div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{value}</p>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
+                  <p className="text-2xl font-bold text-foreground">{value}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
                 </div>
               </div>
             </CardContent>
@@ -97,29 +98,29 @@ export default function OwnerDashboard() {
           {loadingProps && <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>}
           {!loadingProps && myProperties.length === 0 && (
             <div className="text-center py-12">
-              <House className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 mb-4">You haven't listed any properties yet.</p>
+              <House className="w-10 h-10 text-muted mx-auto mb-3" />
+              <p className="text-muted-foreground mb-4">You haven't listed any properties yet.</p>
               {(isAgent || isOwner || isAdmin) && (
-                <Link to="/properties/create"><Button className="bg-blue-800 text-white">Create Your First Listing</Button></Link>
+                <Link to="/properties/create"><Button className="bg-primary text-primary-foreground">Create Your First Listing</Button></Link>
               )}
             </div>
           )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {myProperties.slice(0, 6).map(p => (
               <Link to={`/properties/${p.id}`} key={p.id}>
-                <Card className="hover:shadow-md transition-shadow border border-gray-200 overflow-hidden">
-                  <div className="h-36 bg-gray-100 overflow-hidden">
+                <Card className="hover:shadow-md transition-shadow border border-border overflow-hidden">
+                  <div className="h-36 bg-muted overflow-hidden">
                     {p.images?.length > 0
                       ? <img src={resolveImageSrc(p.images?.[0]?.image)} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = IMAGE_PLACEHOLDER; }} alt={p.property_name} className="w-full h-full object-cover" />
-                      : <div className="w-full h-full flex items-center justify-center"><House className="w-8 h-8 text-gray-300" /></div>}
+                      : <div className="w-full h-full flex items-center justify-center"><House className="w-8 h-8 text-muted" /></div>}
                   </div>
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-semibold text-sm text-gray-900 truncate">{p.property_name}</p>
+                      <p className="font-semibold text-sm text-foreground truncate">{p.property_name}</p>
                       <StatusBadge status={p.status} />
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500"><MapPin className="w-3 h-3" /><span className="truncate">{p.property_address}</span></div>
-                    <p className="font-bold text-blue-900 text-sm">{p.price ? peso(p.price) : "TBD"}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="w-3 h-3" /><span className="truncate">{p.property_address}</span></div>
+                    <p className="font-bold text-primary text-sm">{p.price ? peso(p.price) : "TBD"}</p>
                   </CardContent>
                 </Card>
               </Link>
@@ -139,16 +140,16 @@ export default function OwnerDashboard() {
         </CardHeader>
         <CardContent>
           {loadingSales && <Skeleton className="h-20 w-full" />}
-          {!loadingSales && sales.length === 0 && <p className="text-gray-500 text-sm py-6 text-center">No sales records yet.</p>}
+          {!loadingSales && sales.length === 0 && <p className="text-muted-foreground text-sm py-6 text-center">No sales records yet.</p>}
           <div className="space-y-3">
             {sales.slice(0, 5).map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <div key={s.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border">
                 <div>
-                  <p className="font-semibold text-sm text-gray-900">{s.property?.property_name || `Property #${s.property}`}</p>
-                  <p className="text-xs text-gray-500">{s.date_sold}</p>
+                  <p className="font-semibold text-sm text-foreground">{s.property?.property_name || `Property #${s.property}`}</p>
+                  <p className="text-xs text-muted-foreground">{s.date_sold}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-blue-900 text-sm">{peso(s.final_price)}</p>
+                  <p className="font-bold text-primary text-sm">{peso(s.final_price)}</p>
                   <Badge variant="outline" className="text-[10px]">{s.approval_status}</Badge>
                 </div>
               </div>

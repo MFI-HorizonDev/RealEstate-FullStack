@@ -31,6 +31,18 @@ class Property(models.Model):
         ("CONDO", "Condo"),
         ("COMMERCIAL_SPACE", "Commercial Space"),
     ]
+    CONDITION_TYPES = [
+        ("NEW", "New/Excellent"),
+        ("GOOD", "Good"),
+        ("FAIR", "Fair"),
+        ("POOR", "Poor/Needs Renovation"),
+    ]
+    LOCATION_QUALITIES = [
+        ("PREMIUM", "Premium (CBD/Elite)"),
+        ("URBAN", "Urban (Central)"),
+        ("SUBURBAN", "Suburban"),
+        ("RURAL", "Rural"),
+    ]
     property_name = models.CharField(max_length=255)
     property_description = models.TextField(blank=True, null=True)
     property_address = models.CharField(max_length=1000)
@@ -38,6 +50,8 @@ class Property(models.Model):
     owner = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="owned_properties")
     agent = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True,related_name="listed_properties")
     category = models.CharField(max_length=20, choices=CATEGORY_TYPES, default="HOUSE_AND_LOT")
+    condition = models.CharField(max_length=20, choices=CONDITION_TYPES, default="GOOD")
+    location_quality = models.CharField(max_length=20, choices=LOCATION_QUALITIES, default="SUBURBAN")
     property_size = models.IntegerField(validators=[MinValueValidator(0)])
     building_size = models.IntegerField(validators=[MinValueValidator(0)], default=0)
     num_bedrooms = models.IntegerField(validators=[MinValueValidator(0)], default=0)
@@ -75,13 +89,22 @@ class Property(models.Model):
         return self.base_price() + self.amenity_price_total()
 
     def save(self, *args, **kwargs):
+        is_new = not self.pk
         if self.type == "RENT":
             # Rent listings stay fixed/manual and should not use sale valuation.
             if self.price is None:
                 self.price = 0
         elif not self.pk and (self.price is None or self.price == 0):
-            self.price = self.total_price() 
+            self.price = self.total_price()
         super().save(*args, **kwargs)
+        # Auto-create a default placeholder image for new properties with no images
+        if is_new and not self.images.exists():
+            PropertyImage.objects.create(
+                property=self,
+                image='propertyimg/default.jpg',
+                alt_text='Default property image',
+                is_primary=True,
+            )
 
     def __str__(self):
         return f"{self.category} {self.type} in {self.property_municipality}, {self.property_name} at ₱{self.price:,}"
@@ -91,7 +114,11 @@ def property_image_upload_path(instance, filename):
 
 class PropertyImage(models.Model):
     property = models.ForeignKey(Property, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to=property_image_upload_path)
+    image = models.ImageField(
+        upload_to=property_image_upload_path,
+        blank=True,
+        default='propertyimg/default.jpg',
+    )
     alt_text = models.CharField(max_length=200, blank=True, null=True)
     is_primary = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

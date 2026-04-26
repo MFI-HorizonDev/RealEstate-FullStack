@@ -1,12 +1,14 @@
 import React from "react";
 import { Link } from "react-router";
-import { useProperties } from "@/services/api/useProperties";
-import { useAuth } from "@/services/api/useAuth";
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { House, BedDouble, Bath, Ruler, MapPin } from "lucide-react";
+import { BASE_URL } from "@/hooks/api/config";
 
+const DEFAULT_PROPERTY_IMAGE = `${BASE_URL}/media/propertyimg/default.jpg`;
 const peso = (v) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(Number(v || 0));
 
 function StatusBadge({ status }) {
@@ -51,7 +53,7 @@ export default function AgentProperties() {
                   <div className="h-40 bg-gray-100 overflow-hidden">
                     {p.images?.length > 0
                       ? <img src={p.images[0].image} alt={p.property_name} className="w-full h-full object-cover" />
-                      : <img src="https://via.placeholder.com/800x600?text=No+Image+Available" alt="No image available" className="w-full h-full object-cover" />}
+                      : <img src={DEFAULT_PROPERTY_IMAGE} alt="No image available" className="w-full h-full object-cover" />}
                   </div>
                   <CardContent className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">

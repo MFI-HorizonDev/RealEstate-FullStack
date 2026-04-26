@@ -1,10 +1,11 @@
 import React from "react";
 import { Link } from "react-router";
-import { useSales } from "@/services/api/useSales";
-import { useAuth } from "@/services/api/useAuth";
+import { useSales } from "@/hooks/api/sales/useSales";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import wowImage from "@/assets/wow.jpg";
 import { CalendarDays, ExternalLink, ArrowRight } from "lucide-react";
 
 export default function Bookings() {
@@ -128,7 +129,10 @@ export default function Bookings() {
 
       {Array.isArray(bookings) && bookings.length > 0 && (
         <Card className="relative bg-blue-900 text-white border-0 shadow-xl overflow-hidden">
-          <div className="absolute inset-0 pointer-events-none bg-[url('/src/assets/wow.jpg')] opacity-10 bg-cover bg-center mix-blend-overlay"></div>
+          <div
+            className="absolute inset-0 pointer-events-none opacity-10 bg-cover bg-center mix-blend-overlay"
+            style={{ backgroundImage: `url(${wowImage})` }}
+          ></div>
           <CardHeader className="relative z-10">
             <CardTitle className="text-white text-xl">Bookings Summary</CardTitle>
           </CardHeader>

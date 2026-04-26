@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPut } from "./apiClient";
-
-const BASE_URL = "http://127.0.0.1:8000";
+import { apiGet, apiPost, apiPut, fetchWithAuth } from "./apiClient";
+import { BASE_URL } from "./config";
 
 /**
  * Hook to fetch current user's profile
@@ -23,20 +22,17 @@ export const useUpdateProfile = () => {
   
   return useMutation({
     mutationFn: async (profileData) => {
-      const response = await fetch(`${BASE_URL}/api/profile/update/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/profile/update/`, {
         method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
-        },
-        body: profileData, // FormData for multipart
+        body: profileData,
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         throw new Error(error.detail || "Failed to update profile");
       }
 
-      return response.json();
+      try { return await response.json(); } catch { return null; }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
@@ -56,20 +52,17 @@ export const useUploadProfileImage = () => {
       const formData = new FormData();
       formData.append("profile_image", imageFile);
 
-      const response = await fetch(`${BASE_URL}/api/profile/update/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/profile/update/`, {
         method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
-        },
         body: formData,
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.profile_image?.[0] || "Failed to upload profile image");
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.profile_image?.[0] || error.detail || "Failed to upload profile image");
       }
 
-      return response.json();
+      try { return await response.json(); } catch { return null; }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
@@ -111,21 +104,18 @@ export const useUpdateUser = () => {
 
   return useMutation({
     mutationFn: async ({ userId, userData }) => {
-      const response = await fetch(`${BASE_URL}/api/admin/users/${userId}/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/admin/users/${userId}/`, {
         method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         throw new Error(error.detail || "Failed to update user");
       }
 
-      return response.json();
+      try { return await response.json(); } catch { return null; }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["allUsers"] });
@@ -142,15 +132,12 @@ export const useDeleteUser = () => {
 
   return useMutation({
     mutationFn: async (userId) => {
-      const response = await fetch(`${BASE_URL}/api/admin/users/${userId}/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/admin/users/${userId}/`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
-        },
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({}));
         throw new Error(error.detail || "Failed to delete user");
       }
 

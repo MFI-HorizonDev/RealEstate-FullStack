@@ -28,9 +28,24 @@ class AmenitySerializer(serializers.ModelSerializer):
 
 
 class PropertyImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = PropertyImage
         fields = '__all__'
+
+    def get_image(self, obj):
+        request = self.context.get('request')
+        # Use the stored image if it exists
+        if obj.image and obj.image.name:
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        # Fall back to the default image
+        default_url = '/media/propertyimg/default.jpg'
+        if request:
+            return request.build_absolute_uri(default_url)
+        return default_url
 
 
 class PropertyImageCreateSerializer(serializers.ModelSerializer):
@@ -53,6 +68,38 @@ class PropertyImageCreateSerializer(serializers.ModelSerializer):
         ]
         if value.content_type not in valid_content_types:
             raise serializers.ValidationError("Unsupported file type. Only JPG, JPEG, and WebP files are allowed.")
+
+        # Limit file size to 10MB
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("Property image cannot exceed 10MB.")
+
+        # Verify actual file content via magic bytes (prevents renamed videos/executables)
+        try:
+            header = value.read(12)
+            value.seek(0)  # Reset file pointer for downstream processing
+
+            image_signatures = [
+                b'\xff\xd8\xff',              # JPEG
+                b'\x89PNG\r\n\x1a\n',         # PNG
+                b'GIF87a', b'GIF89a',         # GIF
+                b'RIFF',                       # WebP (RIFF container)
+            ]
+
+            is_valid_image = any(header.startswith(sig) for sig in image_signatures)
+
+            # WebP needs additional check: RIFF....WEBP
+            if header[:4] == b'RIFF' and header[8:12] != b'WEBP':
+                is_valid_image = False
+
+            if not is_valid_image:
+                raise serializers.ValidationError(
+                    "File content does not match a valid image format. "
+                    "The file may be corrupted or is not a real image."
+                )
+        except serializers.ValidationError:
+            raise
+        except Exception:
+            raise serializers.ValidationError("Unable to verify file content. Please upload a valid image.")
 
         return value
 
@@ -105,10 +152,37 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         listing_type = data.get("type")
         price = data.get("price")
+        category = data.get("category", getattr(self.instance, "category", "HOUSE_AND_LOT"))
+
+        property_size = data.get("property_size", getattr(self.instance, "property_size", None))
+        building_size = data.get("building_size", getattr(self.instance, "building_size", 0))
+        num_bedrooms = data.get("num_bedrooms", getattr(self.instance, "num_bedrooms", 0))
+        num_bathrooms = data.get("num_bathrooms", getattr(self.instance, "num_bathrooms", 0))
 
         if listing_type == "RENT" and (price is None or float(price) <= 0):
             raise serializers.ValidationError({
                 "price": "For Rent listings require a fixed price greater than 0."
+            })
+
+        if property_size in [None, ""] or float(property_size) <= 0:
+            raise serializers.ValidationError({
+                "property_size": "Lot area must be greater than 0 sqm."
+            })
+
+        if category == "LOT":
+            invalid_fields = {}
+            if float(building_size or 0) > 0:
+                invalid_fields["building_size"] = "Lot listings must not include a building size."
+            if int(num_bedrooms or 0) > 0:
+                invalid_fields["num_bedrooms"] = "Lot listings must not include bedrooms."
+            if int(num_bathrooms or 0) > 0:
+                invalid_fields["num_bathrooms"] = "Lot listings must not include bathrooms."
+            if invalid_fields:
+                raise serializers.ValidationError(invalid_fields)
+
+        if category != "LOT" and listing_type == "SALE" and price is not None and float(price) < 0:
+            raise serializers.ValidationError({
+                "price": "Price cannot be negative."
             })
 
         return data
@@ -116,6 +190,11 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         amenities_data = validated_data.pop('amenities', [])
         images_data = validated_data.pop('images', [])
+
+        if validated_data.get("category") == "LOT":
+            validated_data["building_size"] = 0
+            validated_data["num_bedrooms"] = 0
+            validated_data["num_bathrooms"] = 0
 
         property_obj = Property.objects.create(**validated_data)
 
@@ -126,6 +205,13 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             PropertyImage.objects.create(property=property_obj, **image_data)
 
         return property_obj
+
+    def update(self, instance, validated_data):
+        if validated_data.get("category", instance.category) == "LOT":
+            validated_data["building_size"] = 0
+            validated_data["num_bedrooms"] = 0
+            validated_data["num_bathrooms"] = 0
+        return super().update(instance, validated_data)
     
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
@@ -191,7 +277,10 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", {})
-        email = user_data.get("email")
+        email = user_data.get("email", serializers.empty)
+        if email is serializers.empty:
+            raw_email = self.initial_data.get("email", serializers.empty)
+            email = raw_email
         if email is not None:
             instance.user.email = email
             instance.user.save(update_fields=["email"])
