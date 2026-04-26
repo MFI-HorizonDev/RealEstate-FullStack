@@ -18,7 +18,7 @@ import Places from "../pages/Places";
 import Tours from "../pages/Tours";
 import Bookings from "../pages/Bookings";
 import TestPagination from "../pages/TestPagination";
-import PrivacyPolicy from "../pages/privacy-info";
+import DataPolicyPage from "../pages/DataPolicyPage";
 import TermsOfService from "../pages/TermsOfService";
 import AboutUs from "../pages/about-us";
 
@@ -113,7 +113,7 @@ export let routes = createBrowserRouter([
   { path: "admin/market-update",   element: dash(<MarketUpdate />,         "Admin") },
 
   // ── Dashboard: Agent ─────────────────────────────────────────────────────────
-  { path: "agent/dashboard",   element: dash(<AgentDashboard />,   null, (auth) => auth.isAgent || auth.tisOwner || auth.isAdmin) },
+  { path: "agent/dashboard",   element: dash(<AgentDashboard />,   null, (auth) => auth.isAgent || auth.isOwner || auth.isAdmin) },
   {
     path: "dashboard/agent",
     element: (
@@ -144,7 +144,7 @@ export let routes = createBrowserRouter([
   // ── Dashboard: Buyer ─────────────────────────────────────────────────────────
   { path: "buyer/dashboard", element: dash(<BuyerDashboard />, "Buyer") },
 
-  { path: "privacy", element: <PublicLayout><PrivacyPolicy /></PublicLayout> },
+  { path: "privacy", element: <PublicLayout><DataPolicyPage /></PublicLayout> },
   { path: "terms",   element: <PublicLayout><TermsOfService /></PublicLayout> },
   { path: "about",   element: <PublicLayout><AboutUs /></PublicLayout> },
 

@@ -2,6 +2,18 @@ from rest_framework import serializers
 from .models import *
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.password_validation import validate_password
+from django.core.files.storage import default_storage
+from pathlib import Path
+
+
+DEFAULT_PROPERTY_IMAGE_DATA_URI = (
+    "data:image/svg+xml;utf8,"
+    "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>"
+    "<rect width='1200' height='800' fill='%23e5e7eb'/>"
+    "<text x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='42' fill='%239ca3af' "
+    "text-anchor='middle' dominant-baseline='middle'>No Property Image</text>"
+    "</svg>"
+)
 
 
 class MunicipalitySerializer(serializers.ModelSerializer):
@@ -36,16 +48,14 @@ class PropertyImageSerializer(serializers.ModelSerializer):
 
     def get_image(self, obj):
         request = self.context.get('request')
-        # Use the stored image if it exists
-        if obj.image and obj.image.name:
+        # Use uploaded image only when the physical file exists in storage.
+        if obj.image and obj.image.name and default_storage.exists(obj.image.name):
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
-        # Fall back to the default image
-        default_url = '/media/propertyimg/default.jpg'
-        if request:
-            return request.build_absolute_uri(default_url)
-        return default_url
+
+        # Backend-safe fallback that never depends on a missing media file.
+        return DEFAULT_PROPERTY_IMAGE_DATA_URI
 
 
 class PropertyImageCreateSerializer(serializers.ModelSerializer):
@@ -59,7 +69,7 @@ class PropertyImageCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Property image cannot exceed 10MB.")
 
         valid_extensions = ['.jpg', '.jpeg', '.webp']
-        extension = value.name.lower()[-4:] if len(value.name) > 4 else value.name.lower()[-3:]
+        extension = Path(value.name).suffix.lower()
         if extension not in valid_extensions:
             raise serializers.ValidationError("Unsupported file extension. Only JPG, JPEG, and WebP files are allowed.")
 
@@ -68,10 +78,6 @@ class PropertyImageCreateSerializer(serializers.ModelSerializer):
         ]
         if value.content_type not in valid_content_types:
             raise serializers.ValidationError("Unsupported file type. Only JPG, JPEG, and WebP files are allowed.")
-
-        # Limit file size to 10MB
-        if value.size > 10 * 1024 * 1024:
-            raise serializers.ValidationError("Property image cannot exceed 10MB.")
 
         # Verify actual file content via magic bytes (prevents renamed videos/executables)
         try:
@@ -255,8 +261,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserProfile
-        fields = ['email', 'profile_image', 'bio', 'phone_number', 'address', 
-                 'city', 'state', 'country', 'zipcode']
+        fields = ['email']
 
     def validate_profile_image(self, value):
         if value:

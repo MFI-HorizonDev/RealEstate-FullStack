@@ -153,6 +153,19 @@ class IsPropertyOwnerOrSuperAdmin(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
+        if request.user.groups.filter(name='Admin').exists():
+            return True
+
+        if request.user.groups.filter(name__in=['Agent', 'Verified Agents']).exists():
+            property_id = view.kwargs.get('property_id')
+            if property_id:
+                from listings.models import Property
+                try:
+                    property_obj = Property.objects.get(pk=property_id)
+                    return property_obj.agent == request.user
+                except Property.DoesNotExist:
+                    return False
+
         if request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists():
             return True
 
@@ -162,7 +175,7 @@ class IsPropertyOwnerOrSuperAdmin(permissions.BasePermission):
             from listings.models import Property
             try:
                 property_obj = Property.objects.get(pk=property_id)
-                return property_obj.owner == request.user
+                return property_obj.owner == request.user or property_obj.agent == request.user
             except Property.DoesNotExist:
                 return False
 
@@ -175,15 +188,21 @@ class IsPropertyOwnerOrSuperAdmin(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
+        if request.user.groups.filter(name='Admin').exists():
+            return True
+
         if request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists():
             return True
+
+        property_obj = getattr(obj, 'property', None)
+        if property_obj is not None:
+            if getattr(property_obj, 'owner', None) == request.user:
+                return True
+            if getattr(property_obj, 'agent', None) == request.user:
+                return True
 
         owner = getattr(obj, 'owner', None)
         if owner is not None:
             return owner == request.user
-
-        property_obj = getattr(obj, 'property', None)
-        if property_obj is not None:
-            return getattr(property_obj, 'owner', None) == request.user
 
         return False

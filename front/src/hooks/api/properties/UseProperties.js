@@ -45,6 +45,7 @@ export function useUploadPropertyImages() {
 
   return useMutation({
     mutationFn: async ({ propertyId, images }) => {
+      const accessToken = localStorage.getItem("access");
       const uploadPromises = images.map((imageFile, index) => {
         const formData = new FormData();
         formData.append("image", imageFile);
@@ -53,15 +54,19 @@ export function useUploadPropertyImages() {
 
         return fetch(`${BASE_URL}/api/properties/${propertyId}/images/create/`, {
           method: "POST",
+          credentials: "include",
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem("access")}`,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
             // Do NOT set Content-Type — browser sets it with the correct boundary for multipart
           },
           body: formData,
         }).then(async (res) => {
           if (!res.ok) {
             const err = await res.json().catch(() => ({}));
-            throw new Error(JSON.stringify(err));
+            const error = new Error(err?.detail || "Upload failed");
+            error.data = err;
+            error.status = res.status;
+            throw error;
           }
           return res.json();
         });
@@ -84,16 +89,21 @@ export function useDeletePropertyImage() {
 
   return useMutation({
     mutationFn: async (imageId) => {
+      const accessToken = localStorage.getItem("access");
       const response = await fetch(`${BASE_URL}/api/images/${imageId}/delete/`, {
         method: "DELETE",
+        credentials: "include",
         headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
       });
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err.detail || "Delete failed");
+        const error = new Error(err.detail || "Delete failed");
+        error.data = err;
+        error.status = response.status;
+        throw error;
       }
       return { success: true };
     },

@@ -9,8 +9,9 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeProvider";
 
 const queryClient = new QueryClient();
+const rootEl = document.getElementById("root");
 
-createRoot(document.getElementById("root")).render(
+createRoot(rootEl).render(
     <ThemeProvider defaultTheme="system" storageKey="re-ui-theme">
         <CookiesProvider>
             <AuthProvider>
