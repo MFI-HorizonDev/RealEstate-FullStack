@@ -111,6 +111,7 @@ export let routes = createBrowserRouter([
   },
   { path: "admin/pending-sales",   element: dash(<PendingSales />,         "Admin") },
   { path: "admin/market-update",   element: dash(<MarketUpdate />,         "Admin") },
+  { path: "admin/listings",        element: dash(<MyListings />,           null, (auth) => auth.isAdmin) },
 
   // ── Dashboard: Agent ─────────────────────────────────────────────────────────
   { path: "agent/dashboard",   element: dash(<AgentDashboard />,   null, (auth) => auth.isAgent || auth.isOwner || auth.isAdmin) },

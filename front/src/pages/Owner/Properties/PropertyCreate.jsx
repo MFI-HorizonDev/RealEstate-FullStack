@@ -17,8 +17,9 @@ import { API_BASE_URL } from "@/hooks/api/config";
 import { notify } from "@/lib/notifications";
 import {
   Building2, MapPin, Ruler, AlertCircle, CheckCircle2,
-  ImagePlus, BedDouble, Bath, Layers, Plus, Trash2, Sofa, Zap,
+  ImagePlus, BedDouble, Bath, Layers, Plus, Trash2, Sofa,
 } from "lucide-react";
+import CmaRecommendationCard from "@/components/properties/CmaRecommendationCard";
 
 const LISTING_TYPES = [
   { value: "SALE", label: "For Sale" },
@@ -457,73 +458,14 @@ export default function PropertyCreate() {
           </CardContent>
         </Card>
 
-        {/* --- CMA Valuation Preview --- */}
         {valuation && formData.type === "SALE" && (
-          <Card className="overflow-hidden border-primary/20 bg-primary/5 shadow-md">
-            <CardHeader className="bg-primary/10 border-b border-primary/10">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-primary animate-pulse" />
-                  <CardTitle className="text-lg">AI-Powered CMA Valuation</CardTitle>
-                </div>
-                {isLoadingValuation && <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />}
-              </div>
-              <CardDescription>Comparable Market Analysis based on recent local data and property specs.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recommended Listing Price</p>
-                  <p className="text-4xl font-black text-primary tracking-tight">₱{valuation.recommended_price.toLocaleString()}</p>
-                  <p className="text-sm text-muted-foreground font-semibold bg-muted inline-block px-2 py-0.5 rounded">₱{valuation.price_per_sqm.toLocaleString()} / sqm</p>
-                </div>
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Suggested Range</p>
-                    <p className="text-xl font-bold text-foreground">
-                      ₱{valuation.suggested_range.min.toLocaleString()} — ₱{valuation.suggested_range.max.toLocaleString()}
-                    </p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="w-full sm:w-auto text-xs font-bold h-9 border-primary/40 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setField("price", String(valuation.recommended_price));
-                    }}
-                  >
-                    Apply Recommended Price
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/10 bg-background/50">
-                <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-primary uppercase tracking-widest">Valuation Explanation</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {valuation.explanation}
-                  </p>
-                </div>
-              </div>
-
-              {valuation.comparables?.length > 0 && (
-                <div className="space-y-3 pt-2">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Local Market Comparables</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {valuation.comparables.map(comp => (
-                      <div key={comp.id} className="p-3 rounded-xl border border-border bg-background shadow-sm hover:border-primary/30 transition-colors">
-                        <p className="font-bold text-xs truncate mb-1">{comp.name}</p>
-                        <p className="text-primary font-extrabold text-sm">₱{(comp.price / 1000000).toFixed(1)}M</p>
-                        <p className="text-[10px] text-muted-foreground font-medium mt-1">{comp.sqm} sqm • ₱{comp.price_per_sqm.toLocaleString()}/sqm</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <CmaRecommendationCard
+            valuation={valuation}
+            isLoading={isLoadingValuation}
+            showApplyButton
+            onApplyRecommended={() => setField("price", String(valuation.recommended_price))}
+            title="CMA Price Recommendation"
+          />
         )}
 
         <Card className="overflow-hidden border-border shadow-sm">
