@@ -125,8 +125,14 @@ export let routes = createBrowserRouter([
   { path: "agent/commissions", element: dash(<AgentCommissions />, null, (auth) => auth.isAdmin) },
 
   // ── Dashboard: SuperAdmin ─────────────────────────────────────────────────────
-  { path: "superadmin/users",      element: dash(<ManageUsers />) },
-  { path: "superadmin/properties", element: dash(<ManageProperties />) },
+  {
+    path: "superadmin/users",
+    element: dash(<ManageUsers />, null, (auth) => auth.isSuperAdmin),
+  },
+  {
+    path: "superadmin/properties",
+    element: dash(<ManageProperties />, null, (auth) => auth.isSuperAdmin),
+  },
 
   // ── Dashboard: Owner ─────────────────────────────────────────────────────────
   { path: "owner/dashboard",  element: dash(<OwnerDashboard />, null, (auth) => auth.isOwner || auth.isAgent || auth.isAdmin) },

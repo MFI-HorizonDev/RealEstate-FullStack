@@ -6,7 +6,7 @@ export default function ProtectedRoute({ children, requiredRole = null, allow = 
   const { user, isLoading, isLoggedIn } = useAuth();
   const auth = useContextAuth();
 
-  if (isLoading) {
+  if (isLoading || auth.isAuthLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-800"></div>

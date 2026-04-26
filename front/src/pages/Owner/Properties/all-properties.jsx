@@ -32,6 +32,12 @@ function resolveImageSrc(imageValue) {
   return imageValue;
 }
 
+function formatPropertyPrice(property) {
+  if (!property?.price) return "TBD";
+  if (property.type === "RENT") return `₱${Number(property.price).toLocaleString()}/month`;
+  return `₱${(property.price / 1000000).toFixed(1)}M`;
+}
+
 export default function AllProperties() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoggedIn } = useAuth();
@@ -356,7 +362,7 @@ export default function AllProperties() {
                         <div>
                           <p className="text-xs text-gray-500 font-medium mb-1">Asking Price</p>
                           <p className="text-xl font-bold text-blue-900">
-                            {property.price ? `₱${(property.price / 1000000).toFixed(1)}M` : "TBD"}
+                            {formatPropertyPrice(property)}
                           </p>
                         </div>
                         <div className="flex gap-3 text-sm text-gray-600 font-medium">

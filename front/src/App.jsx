@@ -60,6 +60,12 @@ export default function App() {
     }
   };
 
+  const formatPropertyPrice = (property) => {
+    if (!property?.price) return "N/A";
+    if (property.type === "RENT") return `₱${Number(property.price).toLocaleString()}/month`;
+    return `₱${(property.price / 1000000).toFixed(1)}M`;
+  };
+
   return (
     <div className="w-full">
 
@@ -302,7 +308,7 @@ export default function App() {
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 font-medium">Price</span>
                       <span className="text-2xl font-bold text-blue-800">
-                        {property.price ? `₱${(property.price / 1000000).toFixed(1)}M` : "N/A"}
+                        {formatPropertyPrice(property)}
                       </span>
                     </div>
                   </div>

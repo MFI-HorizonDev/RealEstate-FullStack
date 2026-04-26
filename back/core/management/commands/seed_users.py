@@ -216,6 +216,13 @@ class Command(BaseCommand):
                 bedrooms = random.randint(1, 6)
                 bathrooms = random.randint(1, 4)
 
+            listing_type = random.choice(['SALE', 'RENT'])
+            if listing_type == 'RENT':
+                # Cap demo rental prices to 100k/month.
+                seeded_price = random.randint(8000, 100000)
+            else:
+                seeded_price = random.randint(1000000, 50000000)
+
             property_obj = Property.objects.create(
                 property_name=seeder.faker.catch_phrase(),
                 property_description=seeder.faker.text(max_nb_chars=200),
@@ -228,8 +235,8 @@ class Command(BaseCommand):
                 building_size=building_size,
                 num_bedrooms=bedrooms,
                 num_bathrooms=bathrooms,
-                price=random.randint(1000000, 50000000),
-                type=random.choice(['SALE', 'RENT']),
+                price=seeded_price,
+                type=listing_type,
                 is_available_for_tour=random.choice([True, False]),
                 status=random.choice(['ACTIVE', 'SOLD', 'UNDER_REVIEW'])
             )

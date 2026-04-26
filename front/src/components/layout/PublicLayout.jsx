@@ -1,22 +1,23 @@
 import React from "react";
 import { Link, useLocation } from "react-router";
 import { CircleUserRound, LogOut, LayoutDashboard } from "lucide-react";
-import { logout, isUserLoggedIn, useAuth } from "@/services/api/useAuth";
+import { useAuth } from "@/services/api/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 import UserAvatar from "@/components/UserAvatar";
 
 
 export default function PublicLayout({ children }) {
   const auth = useContextAuth();
-  console.log("AUTH DEBUG:", auth);
   const { user, isLoggedIn, logout: handleLogout } = useAuth();
   const location = useLocation();
   const dashboardPath = (() => {
+    if (auth?.isAuthLoading) return "#";
     if (!isLoggedIn) return "/login";
     if (user?.is_superuser || user?.groups?.includes("SuperAdmin") || user?.groups?.includes("Super Admin")) return "/superadmin/users";
-    if (user?.groups?.includes("Admin")) return "/admin/audit-dashboard";
-    if (user?.groups?.includes("Agent")) return "/agent/dashboard";
+    // Prioritize owner/agent dashboards before admin for mixed-role accounts.
     if (user?.groups?.includes("Owner")) return "/owner/dashboard";
+    if (user?.groups?.includes("Agent")) return "/agent/dashboard";
+    if (user?.groups?.includes("Admin")) return "/admin/audit-dashboard";
     if (user?.groups?.includes("Buyer")) return "/buyer/dashboard";
     return "/tours";
   })();

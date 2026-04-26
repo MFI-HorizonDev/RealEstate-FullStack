@@ -63,6 +63,12 @@ export default function PropertyDetails() {
   const images = property.images && property.images.length > 0
     ? property.images
     : [{ image: PLACEHOLDER }];
+  const formattedPrice =
+    property.price
+      ? property.type === "RENT"
+        ? `₱${Number(property.price).toLocaleString()}/month`
+        : `₱${(property.price / 1000000).toFixed(2)}M`
+      : "Price on Request";
   const agentEmail = property?.agent_details?.email;
   const contactAgent = () => {
     if (agentEmail) {
@@ -125,7 +131,7 @@ export default function PropertyDetails() {
         <div className="md:text-right">
           <p className="text-sm text-gray-500 font-medium mb-1">Asking Price</p>
           <p className="text-4xl font-bold text-blue-900">
-            {property.price ? `₱${(property.price / 1000000).toFixed(2)}M` : "Price on Request"}
+            {formattedPrice}
           </p>
         </div>
       </div>
@@ -258,15 +264,20 @@ export default function PropertyDetails() {
         </div>
 
         {/* Sticky Action Sidebar */}
+        {!(isAgent || isOwner || isAdmin) && (
         <div className="lg:col-span-1">
           <div className="sticky top-28 bg-white border border-gray-200 rounded-2xl shadow-xl p-6">
             <h3 className="text-xl font-bold text-gray-900 mb-2">Interested in this property?</h3>
             <p className="text-gray-500 mb-6 text-sm">Schedule a viewing or contact the agent directly to get more details.</p>
             
             <div className="bg-blue-50/50 rounded-xl p-4 mb-6 border border-blue-100">
-              <p className="text-sm text-gray-600 mb-1 font-medium">Estimated Value</p>
+              <p className="text-sm text-gray-600 mb-1 font-medium">
+                {property.type === "RENT" ? "Monthly Rent" : "Estimated Value"}
+              </p>
               <p className="text-2xl font-bold text-blue-900">
-                {property.price ? `₱${(property.price / 1000000).toFixed(2)}M` : "TBD"}
+                {property.type === "RENT"
+                  ? (property.price ? `₱${Number(property.price).toLocaleString()}/month` : "TBD")
+                  : (property.price ? `₱${(property.price / 1000000).toFixed(2)}M` : "TBD")}
               </p>
             </div>
 
@@ -391,6 +402,7 @@ export default function PropertyDetails() {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

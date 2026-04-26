@@ -26,10 +26,6 @@ export default function DashboardLayout({ children }) {
   const { user, isLoading, isLoggedIn } = useAuth();
   const location = useLocation();
 
-  if (!isLoggedIn) {
-    return <Navigate to="/login" replace />;
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -39,6 +35,10 @@ export default function DashboardLayout({ children }) {
         </div>
       </div>
     );
+  }
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" replace />;
   }
 
   // Generate breadcrumbs from path
