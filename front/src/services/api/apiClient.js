@@ -12,8 +12,6 @@ let tokenRefreshPromise = null;
 const clearTokens = () => {
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
-  document.cookie = "access=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-  document.cookie = "refresh=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 };
 
 /**
@@ -37,24 +35,8 @@ const normalizeToken = (value) => {
   return trimmed;
 };
 
-const getCookieToken = (key) => {
-  if (typeof document === "undefined") return null;
-  const cookieName = `${key}=`;
-  const parts = document.cookie.split(";");
-  for (let i = 0; i < parts.length; i += 1) {
-    const cookie = parts[i].trim();
-    if (cookie.startsWith(cookieName)) {
-      return normalizeToken(decodeURIComponent(cookie.slice(cookieName.length)));
-    }
-  }
-  return null;
-};
-
 const getStoredToken = (key) => {
-  // apiClient.js is a plain module, so useCookies() cannot be used here.
-  // Read cookie directly, then fallback to localStorage for compatibility.
-  const fromCookie = getCookieToken(key);
-  if (fromCookie) return fromCookie;
+  // Compatibility fallback during migration: still read localStorage tokens.
   return normalizeToken(localStorage.getItem(key));
 };
 
@@ -80,6 +62,7 @@ const refreshAccessToken = async () => {
 
   const response = await fetch(TOKEN_REFRESH_URL, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -140,9 +123,9 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   try {
     let accessToken = await getValidAccessToken();
-    console.log("Token being sent:", accessToken);
     let response = await fetch(url, {
       ...options,
+      credentials: "include",
       headers: buildHeaders(accessToken, options.headers),
     });
 
@@ -159,9 +142,9 @@ export const apiRequest = async (endpoint, options = {}) => {
         accessToken = await refreshAccessToken();
 
         if (accessToken) {
-          console.log("Token being sent:", accessToken);
           response = await fetch(url, {
             ...options,
+            credentials: "include",
             headers: buildHeaders(accessToken, options.headers),
           });
 

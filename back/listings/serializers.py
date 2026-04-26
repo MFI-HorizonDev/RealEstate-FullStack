@@ -39,17 +39,20 @@ class PropertyImageCreateSerializer(serializers.ModelSerializer):
         fields = ['image', 'alt_text', 'is_primary']
 
     def validate_image(self, value):
-        valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+        # Defense scope: cap property images at 10MB.
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("Property image cannot exceed 10MB.")
+
+        valid_extensions = ['.jpg', '.jpeg', '.webp']
         extension = value.name.lower()[-4:] if len(value.name) > 4 else value.name.lower()[-3:]
         if extension not in valid_extensions:
-            raise serializers.ValidationError("Unsupported file extension. Only JPG, PNG, GIF, and WebP files are allowed.")
+            raise serializers.ValidationError("Unsupported file extension. Only JPG, JPEG, and WebP files are allowed.")
 
         valid_content_types = [
-            'image/jpeg', 'image/jpg', 'image/png',
-            'image/gif', 'image/webp'
+            'image/jpeg', 'image/jpg', 'image/webp'
         ]
         if value.content_type not in valid_content_types:
-            raise serializers.ValidationError("Unsupported file type. Only image files are allowed.")
+            raise serializers.ValidationError("Unsupported file type. Only JPG, JPEG, and WebP files are allowed.")
 
         return value
 
@@ -171,14 +174,14 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
 
     def validate_profile_image(self, value):
         if value:
-            valid_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+            valid_extensions = ['.jpg', '.jpeg', '.webp']
             extension = value.name.lower()[-4:] if len(value.name) > 4 else value.name.lower()[-3:]
             if extension not in valid_extensions:
-                raise serializers.ValidationError("Unsupported file extension. Only JPG, PNG, GIF, and WebP files are allowed.")
+                raise serializers.ValidationError("Unsupported file extension. Only JPG, JPEG, and WebP files are allowed.")
 
-            valid_content_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+            valid_content_types = ['image/jpeg', 'image/jpg', 'image/webp']
             if value.content_type not in valid_content_types:
-                raise serializers.ValidationError("Unsupported file type. Only image files are allowed.")
+                raise serializers.ValidationError("Unsupported file type. Only JPG, JPEG, and WebP files are allowed.")
                 
             # Limit file size to 5MB
             if value.size > 5 * 1024 * 1024:

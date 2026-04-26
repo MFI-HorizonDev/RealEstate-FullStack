@@ -2,14 +2,11 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-    TokenVerifyView
-)
+from rest_framework_simplejwt.views import TokenVerifyView
 from listings.views import *
 from tours.views import *
 from deals.views import *
-from .authentication import EmailOrUsernameTokenObtainPairView
+from .auth_views import EmailOrUsernameTokenObtainPairView, CookieTokenRefreshView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -19,7 +16,7 @@ urlpatterns = [
 
     # Auth
     path('api/token/', EmailOrUsernameTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/me/', UserProfileView.as_view(), name='user-profile'),
     path('api/profile/update/', UserProfileUpdateView.as_view(), name='user-profile-update'),
@@ -28,6 +25,7 @@ urlpatterns = [
 
     # Register
     path('api/register/', RegisterView.as_view(), name='register'),
+    path('api/logout/', LogoutView.as_view(), name='logout'),
 
     # Properties
     path('api/properties/', PropertyListView.as_view(), name='property-list'),

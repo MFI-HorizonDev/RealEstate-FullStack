@@ -1,15 +1,20 @@
 from rest_framework import generics, permissions, status
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import *
 from .serializers import *
 from core.permissions import *
+from core.authentication import CookieJWTAuthentication
+from core.throttles import RegisterRateThrottle
 from .pricing import PricingEngine
 from .tasks import update_all_market_buffers
 from .throttles import VerifiedAgentThrottle, UnverifiedAgentThrottle
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import Group, User
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+
+JWTAuthentication = CookieJWTAuthentication
 
 # Health Check
 class HealthCheckView(APIView):
@@ -22,13 +27,24 @@ class HealthCheckView(APIView):
 # List all properties
 class PropertyListView(generics.ListAPIView):
     serializer_class = PropertySerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        queryset = Property.objects.filter(status__in=['ACTIVE', 'UNDER_REVIEW', 'REJECTED', 'INACTIVE'])
+        user = self.request.user
+        is_admin = user.is_superuser or user.groups.filter(
+            name__in=["Admin", "SuperAdmin", "Super Admin"]
+        ).exists()
+
+        if is_admin:
+            queryset = Property.objects.filter(
+                status__in=["ACTIVE", "UNDER_REVIEW", "REJECTED", "INACTIVE"]
+            )
+        else:
+            queryset = Property.objects.filter(status="ACTIVE")
+
         status_param = self.request.query_params.get('status')
-        if status_param:
+        if status_param and is_admin:
             queryset = queryset.filter(status=status_param)
         return queryset.order_by('-created_at')
 
@@ -36,7 +52,7 @@ class PropertyListView(generics.ListAPIView):
 class PropertyCreateView(generics.CreateAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertyCreateSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminOrAgentOrOwnerGroup]
     throttle_classes = [VerifiedAgentThrottle, UnverifiedAgentThrottle]
 
@@ -47,26 +63,26 @@ class PropertyCreateView(generics.CreateAPIView):
 class PropertyRetrieveView(generics.RetrieveAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
 # Update property (owner/agent only)
 class PropertyUpdateView(generics.UpdateAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertyCreateSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsOwnerOrAgentOrReadOnly]
 
 # Delete property (admin only)
 class PropertyDeleteView(generics.DestroyAPIView):
     queryset = Property.objects.all()
     serializer_class = PropertySerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroup]
 
 # Admin-only: approve or reject a flagged listing by updating its status
 class AdminPropertyStatusView(APIView):
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroup]
 
     def patch(self, request, pk):
@@ -93,7 +109,7 @@ class AdminPropertyAgentAssignView(APIView):
     Admin endpoint to assign, reassign, or clear a property's assigned agent.
     Accepts payload: {"agent_id": <int|null>}
     """
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroup]
 
     def patch(self, request, pk):
@@ -149,7 +165,7 @@ class AdminPropertyAgentAssignView(APIView):
 
 class AdminAgentListView(APIView):
     """Return only users that can be assigned as agents."""
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroup]
 
     def get(self, request):
@@ -186,7 +202,7 @@ class PropertyImageCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         property_id = self.kwargs['property_id']
-        property_instance = Property.objects.get(pk=property_id)
+        property_instance = get_object_or_404(Property, pk=property_id)
         if self.request.user == property_instance.owner or (
             hasattr(property_instance, 'agent') and self.request.user == property_instance.agent
         ):
@@ -268,7 +284,7 @@ class AmenityCreateView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         if 'property_id' in self.kwargs:
-            property_instance = Property.objects.get(pk=self.kwargs['property_id'])
+            property_instance = get_object_or_404(Property, pk=self.kwargs['property_id'])
             if (self.request.user == property_instance.owner or
                 (hasattr(property_instance, 'agent') and self.request.user == property_instance.agent)):
                 serializer.save(property=property_instance, added_by=self.request.user)
@@ -321,6 +337,7 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = []
     authentication_classes = []
+    throttle_classes = [RegisterRateThrottle]
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -329,7 +346,7 @@ class RegisterView(generics.CreateAPIView):
 
         refresh = RefreshToken.for_user(user)
 
-        return Response({
+        response = Response({
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -341,6 +358,33 @@ class RegisterView(generics.CreateAPIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }, status=status.HTTP_201_CREATED)
+        response.set_cookie(
+            settings.AUTH_COOKIE_ACCESS,
+            str(refresh.access_token),
+            httponly=settings.AUTH_COOKIE_HTTPONLY,
+            secure=settings.AUTH_COOKIE_SECURE,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+        )
+        response.set_cookie(
+            settings.AUTH_COOKIE_REFRESH,
+            str(refresh),
+            httponly=settings.AUTH_COOKIE_HTTPONLY,
+            secure=settings.AUTH_COOKIE_SECURE,
+            samesite=settings.AUTH_COOKIE_SAMESITE,
+            path=settings.AUTH_COOKIE_REFRESH_PATH,
+        )
+        return response
+
+
+class LogoutView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        response = Response({"detail": "Logged out."}, status=status.HTTP_200_OK)
+        response.delete_cookie(settings.AUTH_COOKIE_ACCESS)
+        response.delete_cookie(settings.AUTH_COOKIE_REFRESH, path=settings.AUTH_COOKIE_REFRESH_PATH)
+        return response
 class UserProfileView(generics.RetrieveAPIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]

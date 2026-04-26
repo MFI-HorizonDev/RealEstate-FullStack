@@ -304,7 +304,7 @@ export const ImageCropperModal = ({
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept=".jpg,.jpeg,.webp,image/jpeg,image/webp"
             onChange={handleFileSelect}
             className="hidden"
           />

@@ -204,7 +204,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept=".jpg,.jpeg,.webp,image/jpeg,image/webp"
         multiple
         onChange={handleFileChange}
         className="hidden"

@@ -1,22 +1,16 @@
-from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
+from django.conf import settings
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
-class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Allow login via either username or email using the default /api/token/ endpoint.
-    """
+class CookieJWTAuthentication(JWTAuthentication):
+    def authenticate(self, request):
+        header = self.get_header(request)
+        if header is not None:
+            return super().authenticate(request)
 
-    def validate(self, attrs):
-        identifier = attrs.get(self.username_field)
-        if identifier:
-            user = get_user_model().objects.filter(email__iexact=identifier).first()
-            if user:
-                attrs[self.username_field] = user.get_username()
+        raw_token = request.COOKIES.get(settings.AUTH_COOKIE_ACCESS)
+        if not raw_token:
+            return None
 
-        return super().validate(attrs)
-
-
-class EmailOrUsernameTokenObtainPairView(TokenObtainPairView):
-    serializer_class = EmailOrUsernameTokenObtainPairSerializer
+        validated_token = self.get_validated_token(raw_token)
+        return self.get_user(validated_token), validated_token
