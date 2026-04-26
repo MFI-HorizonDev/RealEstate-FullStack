@@ -39,7 +39,7 @@ class PropertyListView(generics.ListAPIView):
 
         if is_admin:
             queryset = Property.objects.filter(
-                status__in=["ACTIVE", "UNDER_REVIEW", "REJECTED", "INACTIVE"]
+                status__in=["ACTIVE", "UNDER_REVIEW", "REJECTED", "INACTIVE", "SOLD"]
             )
         else:
             queryset = Property.objects.filter(status="ACTIVE")

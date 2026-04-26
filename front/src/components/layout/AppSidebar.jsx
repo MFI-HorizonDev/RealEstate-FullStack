@@ -50,7 +50,7 @@ export function AppSidebar() {
   const adminItems = isAdmin ? [
     { title: "Audit Dashboard",     url: "/admin/audit-dashboard",  icon: ShieldAlert },
     { title: "Pending Sales",       url: "/admin/pending-sales",    icon: ClipboardList },
-    { title: "My Listings",         url: "/owner/listings",         icon: Building2 },
+    { title: "My Listings",         url: "/admin/listings",         icon: Building2 },
     { title: "Create Listing",      url: "/properties/create",      icon: PlusCircle },
     { title: "Trigger Market Update", url: "/admin/market-update",  icon: Zap },
   ] : [];

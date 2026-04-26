@@ -44,6 +44,7 @@ export default function AllProperties() {
   const { user, isLoggedIn } = useAuth();
   const { isAgent, isOwner, isAdmin, isAuthLoading } = useContextAuth();
   const [activeTab, setActiveTab] = useState("ACTIVE");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter state — initialized from URL params
   const [maxPrice, setMaxPrice] = useState(
@@ -57,7 +58,7 @@ export default function AllProperties() {
   );
 
   const { data, isLoading, isError, error } = useProperties({ 
-    page: 1, 
+    page: currentPage, 
     enabled: true,
     status: (isOwner || isAdmin || isAgent) ? activeTab : "ACTIVE"
   });
@@ -68,6 +69,15 @@ export default function AllProperties() {
     : Array.isArray(data)
       ? data
       : [];
+  const pageSize = 10;
+  const totalCount = typeof data?.count === "number" ? data.count : properties.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const canPrevPage = Boolean(data?.previous) && currentPage > 1;
+  const canNextPage = Boolean(data?.next) && currentPage < totalPages;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   // Client-side filtering — matches actual API field names
   const filtered = properties.filter((p) => {
@@ -99,6 +109,7 @@ export default function AllProperties() {
     if (selectedMunicipality !== "any") params.municipality = selectedMunicipality;
     if (selectedType !== "all") params.type = selectedType;
     setSearchParams(params);
+    setCurrentPage(1);
   };
 
   const clearFilters = () => {
@@ -106,6 +117,7 @@ export default function AllProperties() {
     setSelectedMunicipality("any");
     setSelectedType("all");
     setSearchParams({});
+    setCurrentPage(1);
   };
 
   // Carousel image index
@@ -241,6 +253,7 @@ export default function AllProperties() {
                   <TabsList className="bg-transparent h-9">
                     <TabsTrigger value="ACTIVE" className="px-4 text-xs font-bold">Active</TabsTrigger>
                     <TabsTrigger value="UNDER_REVIEW" className="px-4 text-xs font-bold">Pending</TabsTrigger>
+                    <TabsTrigger value="SOLD" className="px-4 text-xs font-bold">Sold</TabsTrigger>
                     <TabsTrigger value="REJECTED" className="px-4 text-xs font-bold">Rejected</TabsTrigger>
                   </TabsList>
                 </Tabs>
@@ -389,6 +402,32 @@ export default function AllProperties() {
               );
             })}
           </div>
+
+          {!isLoading && totalPages > 1 && (
+            <div className="mt-8 flex items-center justify-between rounded-lg border border-border bg-card p-4">
+              <p className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages} ({totalCount} total)
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={!canPrevPage}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={!canNextPage}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

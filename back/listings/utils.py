@@ -50,13 +50,13 @@ def get_market_demand_signal(municipality, category):
     if category not in SUPPORTED_PROPERTY_CATEGORIES:
         category = "HOUSE_AND_LOT"
 
-    cutoff_dt = timezone.now() - timedelta(days=30)
-    cutoff_date = cutoff_dt.date()
+    tours_cutoff_dt = timezone.now() - timedelta(days=90)
+    sales_cutoff_date = (timezone.now() - timedelta(days=180)).date()
 
     recent_tours = Tour.objects.filter(
         property__property_municipality=municipality,
         property__category=category,
-        created_at__gte=cutoff_dt,
+        created_at__gte=tours_cutoff_dt,
         status__in=["QUEUED", "SCHEDULED", "COMPLETED"],
     ).count()
 
@@ -64,7 +64,7 @@ def get_market_demand_signal(municipality, category):
         property__property_municipality=municipality,
         property__category=category,
         approval_status="COMPLETED",
-        date_sold__gte=cutoff_date,
+        date_sold__gte=sales_cutoff_date,
     ).count()
 
     active_supply = Property.objects.filter(
@@ -74,24 +74,23 @@ def get_market_demand_signal(municipality, category):
         type="SALE",
     ).count()
 
-    tour_per_listing = recent_tours / max(active_supply, 1)
-    sales_per_listing = recent_sales / max(active_supply, 1)
-    sales_velocity = recent_sales / 30.0
+    tour_intensity = recent_tours / max(active_supply, 1)
+    close_intensity = recent_sales / max(active_supply, 1)
+    monthly_sales_rate = recent_sales / 6.0
+    months_of_inventory = active_supply / max(monthly_sales_rate, 0.2)
 
-    tour_score = _clamp(tour_per_listing / 2.0, 0.0, 1.5)
-    velocity_score = _clamp(sales_velocity / 0.25, 0.0, 1.5)
-    absorption_score = _clamp(sales_per_listing / 0.5, 0.0, 1.5)
-    supply_pressure = _clamp(active_supply / 25.0, 0.0, 1.5)
+    tour_score = _clamp(tour_intensity / 6.0, 0.0, 1.5)
+    close_score = _clamp(close_intensity / 0.8, 0.0, 1.5)
+    supply_pressure = _clamp(months_of_inventory / 12.0, 0.0, 1.5)
 
     raw_score = (
-        (tour_score * 0.35)
-        + (velocity_score * 0.35)
-        + (absorption_score * 0.30)
-        - (supply_pressure * 0.25)
+        (tour_score * 0.40)
+        + (close_score * 0.45)
+        - (supply_pressure * 0.30)
     )
 
-    normalized_score = _clamp(raw_score - 0.35, -0.15, 0.25)
-    competitive_index = _clamp(supply_pressure - ((tour_score + velocity_score) / 2.0), -1.0, 1.0)
+    normalized_score = _clamp(raw_score - 0.25, -0.20, 0.30)
+    competitive_index = _clamp(supply_pressure - ((tour_score + close_score) / 2.0), -1.0, 1.0)
 
     return {
         "category": category,

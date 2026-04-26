@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django_seed import Seed
 from django.utils import timezone
 import random
+from decimal import Decimal
 
 from listings.models import Municipality, Property, Amenity, PropertyImage
 from tours.models import Tour
@@ -12,6 +13,46 @@ from deals.models import Sale, PendingSaleRequest
 
 class Command(BaseCommand):
     help = 'Seed database: Groups → Users (with group join) → Tables → Permissions'
+
+    MUNICIPALITY_PRICE_TIERS = {
+        "PREMIUM": (55000, 95000),
+        "URBAN": (30000, 55000),
+        "SUBURBAN": (15000, 30000),
+        "RURAL": (6000, 15000),
+    }
+    MUNICIPALITY_TIER_WEIGHTS = [
+        ("PREMIUM", 0.15),
+        ("URBAN", 0.35),
+        ("SUBURBAN", 0.35),
+        ("RURAL", 0.15),
+    ]
+
+    SALE_CATEGORY_MULTIPLIERS = {
+        "HOUSE_AND_LOT": Decimal("1.00"),
+        "LOT": Decimal("0.90"),
+        "APARTMENT": Decimal("1.08"),
+        "CONDO": Decimal("1.12"),
+        "COMMERCIAL_SPACE": Decimal("1.18"),
+    }
+    SALE_BUILDING_WEIGHTS = {
+        "HOUSE_AND_LOT": Decimal("0.35"),
+        "LOT": Decimal("0.00"),
+        "APARTMENT": Decimal("0.65"),
+        "CONDO": Decimal("0.75"),
+        "COMMERCIAL_SPACE": Decimal("0.60"),
+    }
+    CONDITION_MODIFIERS = {
+        "NEW": Decimal("1.12"),
+        "GOOD": Decimal("1.00"),
+        "FAIR": Decimal("0.90"),
+        "POOR": Decimal("0.80"),
+    }
+    LOCATION_MODIFIERS = {
+        "PREMIUM": Decimal("1.20"),
+        "URBAN": Decimal("1.08"),
+        "SUBURBAN": Decimal("1.00"),
+        "RURAL": Decimal("0.92"),
+    }
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -30,6 +71,45 @@ class Command(BaseCommand):
             action='store_true',
             help='Skip creating/updating the default superadmin account'
         )
+
+    def _pick_municipality_tier(self):
+        tiers = [tier for tier, _ in self.MUNICIPALITY_TIER_WEIGHTS]
+        weights = [weight for _, weight in self.MUNICIPALITY_TIER_WEIGHTS]
+        return random.choices(tiers, weights=weights, k=1)[0]
+
+    def _calculate_seeded_amenity_impact(self, property_obj):
+        amenities = property_obj.amenities.all().order_by("-price")
+        total = Decimal("0")
+        for idx, amenity in enumerate(amenities):
+            value = Decimal(str(amenity.price))
+            if amenity.amenity_type == "Basic":
+                value = min(value, Decimal("100000"))
+            elif amenity.amenity_type == "Luxury":
+                value = min(value, Decimal("250000"))
+            decay = Decimal("1") + (Decimal("0.20") * Decimal(idx))
+            total += value / decay
+        return total
+
+    def _calculate_seeded_sale_price(self, property_obj):
+        lot_size = Decimal(str(property_obj.property_size or 0))
+        building_size = Decimal(str(property_obj.building_size or 0))
+        municipal_rate = Decimal(str(property_obj.property_municipality.price_per_sqm or 0))
+
+        base = lot_size * municipal_rate
+        category_mod = self.SALE_CATEGORY_MULTIPLIERS.get(property_obj.category, Decimal("1.00"))
+        condition_mod = self.CONDITION_MODIFIERS.get(property_obj.condition, Decimal("1.00"))
+        location_mod = self.LOCATION_MODIFIERS.get(property_obj.location_quality, Decimal("1.00"))
+        building_weight = self.SALE_BUILDING_WEIGHTS.get(property_obj.category, Decimal("0.35"))
+
+        building_component = building_size * municipal_rate * building_weight
+        bed_component = Decimal(str(max(property_obj.num_bedrooms or 0, 0) * 120000))
+        bath_component = Decimal(str(max(property_obj.num_bathrooms or 0, 0) * 90000))
+        amenity_component = self._calculate_seeded_amenity_impact(property_obj)
+
+        subtotal = (base * category_mod * condition_mod * location_mod) + building_component + bed_component + bath_component + amenity_component
+        noise_multiplier = Decimal(str(random.uniform(0.97, 1.03)))
+        final_price = subtotal * noise_multiplier
+        return int(max(800000, final_price.quantize(Decimal("1"))))
 
     def handle(self, *args, **options):
         number = options.get('number_positional') if options.get('number_positional') is not None else options['number']
@@ -172,16 +252,20 @@ class Command(BaseCommand):
 
         # Create Municipalities
         municipalities = []
+        municipality_tiers = {}
         for i in range(max(3, number // 3)):
+            tier = self._pick_municipality_tier()
+            min_price, max_price = self.MUNICIPALITY_PRICE_TIERS[tier]
             municipality, created = Municipality.objects.get_or_create(
                 municipality_name=seeder.faker.unique.city(),
                 defaults={
-                    'price_per_sqm': random.randint(5000, 80000)
+                    'price_per_sqm': random.randint(min_price, max_price)
                 }
             )
             municipalities.append(municipality)
+            municipality_tiers[municipality.id] = tier
             if created:
-                self.stdout.write(f'  ✓ Created Municipality: {municipality.municipality_name}')
+                self.stdout.write(f'  ✓ Created Municipality: {municipality.municipality_name} ({tier})')
 
         # Get all users for assignments
         owners = list(User.objects.filter(groups__name='Owner'))
@@ -197,6 +281,7 @@ class Command(BaseCommand):
             agent = random.choice(agents) if agents else None
             municipality = random.choice(municipalities)
             category = random.choice(category_choices)
+            tier = municipality_tiers.get(municipality.id) or self._pick_municipality_tier()
 
             lot_size = random.randint(70, 800)
             if category == 'LOT':
@@ -216,12 +301,26 @@ class Command(BaseCommand):
                 bedrooms = random.randint(1, 6)
                 bathrooms = random.randint(1, 4)
 
+            location_by_tier = {
+                "PREMIUM": random.choices(["PREMIUM", "URBAN"], weights=[0.75, 0.25], k=1)[0],
+                "URBAN": random.choices(["URBAN", "SUBURBAN", "PREMIUM"], weights=[0.65, 0.25, 0.10], k=1)[0],
+                "SUBURBAN": random.choices(["SUBURBAN", "URBAN", "RURAL"], weights=[0.70, 0.20, 0.10], k=1)[0],
+                "RURAL": random.choices(["RURAL", "SUBURBAN"], weights=[0.80, 0.20], k=1)[0],
+            }
+            condition = random.choices(
+                ["NEW", "GOOD", "FAIR", "POOR"],
+                weights=[0.20, 0.50, 0.22, 0.08],
+                k=1
+            )[0]
+            location_quality = location_by_tier.get(tier, "SUBURBAN")
+
             listing_type = random.choice(['SALE', 'RENT'])
             if listing_type == 'RENT':
                 # Cap demo rental prices to 100k/month.
                 seeded_price = random.randint(8000, 100000)
             else:
-                seeded_price = random.randint(1000000, 50000000)
+                # Temporary placeholder. Realistic SALE price is computed after amenities are seeded.
+                seeded_price = 1
 
             property_obj = Property.objects.create(
                 property_name=seeder.faker.catch_phrase(),
@@ -231,6 +330,8 @@ class Command(BaseCommand):
                 owner=owner,
                 agent=agent,
                 category=category,
+                condition=condition,
+                location_quality=location_quality,
                 property_size=lot_size,
                 building_size=building_size,
                 num_bedrooms=bedrooms,
@@ -262,6 +363,10 @@ class Command(BaseCommand):
                         price=random.randint(50000, 300000),
                         added_by=random.choice(all_users) if all_users else None
                     )
+
+            if listing_type == 'SALE':
+                property_obj.price = self._calculate_seeded_sale_price(property_obj)
+                property_obj.save(update_fields=["price"])
 
         # Create Tours
         tours_created = 0

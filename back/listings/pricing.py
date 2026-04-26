@@ -1,13 +1,8 @@
 from decimal import Decimal
+from django.apps import apps
+from django.db.models import Q
 
 from .utils import get_cached_market_buffer, get_cached_demand_signal
-
-
-from decimal import Decimal
-from django.apps import apps
-from django.db.models import Avg, Q
-
-from .utils import get_cached_market_buffer
 
 class PricingEngine:
     """
@@ -18,6 +13,9 @@ class PricingEngine:
     BASIC_CAP = 100000
     LUXURY_CAP = 250000
     AMENITY_DECAY_STEP = Decimal("0.20")
+    DEMAND_MIN = Decimal("-0.10")
+    DEMAND_MAX = Decimal("0.20")
+    HOUSE_BUILDING_RATE_PER_SQM = Decimal("18000")
 
     # Adjustment Multipliers
     CONDITION_MODIFIERS = {
@@ -114,8 +112,19 @@ class PricingEngine:
         
         amenity_impact = self._calculate_amenity_impact(property_obj)
         
-        # Apply multipliers to base valuation
-        adjusted_valuation = (base_valuation * condition_mod * location_mod) + amenity_impact
+        # Add construction component only for HOUSE_AND_LOT to reflect build cost/value.
+        building_component = Decimal("0")
+        if getattr(property_obj, "category", None) == "HOUSE_AND_LOT":
+            building_size = Decimal(str(max(getattr(property_obj, "building_size", 0) or 0, 0)))
+            building_component = building_size * self.HOUSE_BUILDING_RATE_PER_SQM
+
+        # Apply multipliers to lot-driven CMA baseline, then add amenities/building component.
+        adjusted_valuation = (base_valuation * condition_mod * location_mod) + amenity_impact + building_component
+        demand_signal = get_cached_demand_signal(property_obj.property_municipality, property_obj.category)
+        raw_demand_score = Decimal(str(demand_signal.get("score", 0)))
+        demand_score = max(self.DEMAND_MIN, min(self.DEMAND_MAX, raw_demand_score))
+        demand_multiplier = Decimal("1.0") + demand_score
+        adjusted_valuation = adjusted_valuation * demand_multiplier
         
         # 4. Final Recommendation
         recommended_price = self._quantize_int(adjusted_valuation)
@@ -129,7 +138,9 @@ class PricingEngine:
             f"Market rate: ₱{int(avg_comp_sqm_price):,}/sqm. "
             f"Adjusted for '{cond_label}' condition ({int((condition_mod-1)*100):+d}%) "
             f"and '{loc_label}' location ({int((location_mod-1)*100):+d}%). "
-            f"Added ₱{int(amenity_impact):,} for features/amenities."
+            f"Added ₱{int(amenity_impact):,} for features/amenities. "
+            f"Building component: ₱{int(building_component):,}. "
+            f"Demand heat applied at {float(demand_score) * 100:+.1f}%."
         )
 
         return {
@@ -144,6 +155,10 @@ class PricingEngine:
             "adjustments": {
                 "condition": float(condition_mod),
                 "location": float(location_mod),
-                "amenity_impact": int(amenity_impact)
+                "amenity_impact": int(amenity_impact),
+                "building_component": int(building_component),
+                "demand_score": float(demand_score),
+                "demand_multiplier": float(demand_multiplier),
+                "competitive_index": float(demand_signal.get("competitive_index", 0.0)),
             }
         }

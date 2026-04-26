@@ -4,6 +4,7 @@ import { useProperty } from "@/hooks/api/properties/UseProperties";
 import { useCreateTour } from "@/hooks/api/tours/useTours";
 import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
+import { useValuationPreview } from "@/hooks/api/properties/UseValuationPreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import PropertyImageManager from "@/components/PropertyImageManager";
 import { canEditProperty } from "@/features/properties/api/permissions";
+import CmaRecommendationCard from "@/components/properties/CmaRecommendationCard";
 
 export default function PropertyDetails() {
   const { id } = useParams();
@@ -20,6 +22,8 @@ export default function PropertyDetails() {
   const { mutateAsync: createTour, isPending: isBooking } = useCreateTour();
   const { user, isLoading: loadingAuth } = useAuth();
   const { isAuthenticated, isAdmin, isAgent, isOwner, isBuyer, isAuthLoading } = useContextAuth();
+  const shouldShowCma = (isAdmin || isAgent || isOwner) && property?.type === "SALE";
+  const { data: valuation, isLoading: valuationLoading } = useValuationPreview(shouldShowCma ? id : null);
   const navigate = useNavigate();
 
   const canEdit = !isAuthLoading && !loadingProperty && property
@@ -225,6 +229,16 @@ export default function PropertyDetails() {
               )}
             </div>
           </section>
+
+          {shouldShowCma && (
+            <section>
+              <CmaRecommendationCard
+                valuation={valuation}
+                isLoading={valuationLoading}
+                title="CMA Price Recommendation (Read Only)"
+              />
+            </section>
+          )}
 
           <section>
             <h2 className="mb-6 text-2xl font-bold text-foreground">Amenities</h2>
