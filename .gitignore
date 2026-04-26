@@ -142,3 +142,4 @@ dist-ssr
 
 .qwen/
 .cursor/
+.kiro/

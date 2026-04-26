@@ -472,16 +472,7 @@ class UserProfileUpdateView(generics.UpdateAPIView):
         return UserProfileUpdateSerializer
 
     def perform_update(self, serializer):
-        profile = serializer.save()
-        profile_fields = ["bio", "phone_number", "address", "city", "state", "country", "zipcode"]
-        pending_updates = []
-        for field in profile_fields:
-            raw_value = self.request.data.get(field)
-            if raw_value is not None:
-                setattr(profile, field, raw_value)
-                pending_updates.append(field)
-        if pending_updates:
-            profile.save(update_fields=pending_updates + ["updated_at"])
+        serializer.save()
         raw_email = self.request.data.get("email")
         if raw_email is not None:
             self.request.user.email = raw_email
@@ -493,15 +484,6 @@ class UserProfileUpdateView(generics.UpdateAPIView):
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
-        profile_fields = ["bio", "phone_number", "address", "city", "state", "country", "zipcode"]
-        pending_updates = []
-        for field in profile_fields:
-            raw_value = request.data.get(field)
-            if raw_value is not None:
-                setattr(instance, field, raw_value)
-                pending_updates.append(field)
-        if pending_updates:
-            instance.save(update_fields=pending_updates + ["updated_at"])
         instance.refresh_from_db()
         return UserProfileView.build_profile_payload(request.user)
 

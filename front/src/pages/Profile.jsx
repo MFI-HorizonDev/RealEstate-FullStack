@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { User, Mail, Camera } from "lucide-react";
 import { notify } from "@/lib/notifications";
 import ImageCropperModal from '@/components/ImageCropperModal';
@@ -27,26 +26,12 @@ export default function Profile() {
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [profileFormData, setProfileFormData] = useState({
     email: '',
-    bio: profile?.profile?.bio || '',
-    phone_number: profile?.profile?.phone_number || '',
-    address: profile?.profile?.address || '',
-    city: profile?.profile?.city || '',
-    state: profile?.profile?.state || '',
-    country: profile?.profile?.country || '',
-    zipcode: profile?.profile?.zipcode || '',
   });
 
   useEffect(() => {
     if (!profile) return;
     setProfileFormData({
       email: profile?.email || user?.email || '',
-      bio: profile?.profile?.bio || '',
-      phone_number: profile?.profile?.phone_number || '',
-      address: profile?.profile?.address || '',
-      city: profile?.profile?.city || '',
-      state: profile?.profile?.state || '',
-      country: profile?.profile?.country || '',
-      zipcode: profile?.profile?.zipcode || '',
     });
   }, [profile, user]);
 
@@ -135,13 +120,6 @@ export default function Profile() {
   const handleSaveProfile = () => {
     updateProfile.mutate({
       email: profileFormData.email || "",
-      bio: profileFormData.bio || "",
-      phone_number: profileFormData.phone_number || "",
-      address: profileFormData.address || "",
-      city: profileFormData.city || "",
-      state: profileFormData.state || "",
-      country: profileFormData.country || "",
-      zipcode: profileFormData.zipcode || "",
     }, {
       onSuccess: () => {
         notify.success("Profile updated successfully.");
@@ -265,20 +243,6 @@ export default function Profile() {
                       <Label htmlFor="email">Email</Label>
                       <Input id="email" name="email" value={profileFormData.email} onChange={handleProfileFormChange} />
                     </div>
-                    <div>
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea id="bio" name="bio" value={profileFormData.bio} onChange={handleProfileFormChange} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input name="phone_number" placeholder="Phone" value={profileFormData.phone_number} onChange={handleProfileFormChange} />
-                      <Input name="city" placeholder="City" value={profileFormData.city} onChange={handleProfileFormChange} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Input name="state" placeholder="State" value={profileFormData.state} onChange={handleProfileFormChange} />
-                      <Input name="country" placeholder="Country" value={profileFormData.country} onChange={handleProfileFormChange} />
-                    </div>
-                    <Input name="address" placeholder="Address" value={profileFormData.address} onChange={handleProfileFormChange} />
-                    <Input name="zipcode" placeholder="Zip Code" value={profileFormData.zipcode} onChange={handleProfileFormChange} />
                     <Button onClick={handleSaveProfile} disabled={updateProfile.isPending}>
                       {updateProfile.isPending ? "Saving..." : "Save Changes"}
                     </Button>

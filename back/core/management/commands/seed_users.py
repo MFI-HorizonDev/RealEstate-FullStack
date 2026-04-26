@@ -252,15 +252,16 @@ class Command(BaseCommand):
                     is_primary=(j == 0)
                 )
 
-            # Create Amenities
-            for j in range(random.randint(0, 3)):
-                Amenity.objects.create(
-                    property=property_obj,
-                    name=random.choice(['Pool', 'Garden', 'Garage', 'Gym', 'Security', 'Elevator']),
-                    amenity_type=random.choice(['Basic', 'Luxury']),
-                    price=random.randint(50000, 300000),
-                    added_by=random.choice(all_users) if all_users else None
-                )
+            # Create Amenities (skip LOT listings)
+            if category != 'LOT':
+                for j in range(random.randint(0, 3)):
+                    Amenity.objects.create(
+                        property=property_obj,
+                        name=random.choice(['Pool', 'Garden', 'Garage', 'Gym', 'Security', 'Elevator']),
+                        amenity_type=random.choice(['Basic', 'Luxury']),
+                        price=random.randint(50000, 300000),
+                        added_by=random.choice(all_users) if all_users else None
+                    )
 
         # Create Tours
         tours_created = 0

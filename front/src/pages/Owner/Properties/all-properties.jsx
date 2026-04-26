@@ -235,7 +235,7 @@ export default function AllProperties() {
               </p>
             </div>
             
-            {!isAuthLoading && (isOwner || isAdmin || isAgent) && (
+            {!isAuthLoading && isAdmin && (
               <div className="flex items-center gap-4">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="bg-muted p-1 rounded-lg">
                   <TabsList className="bg-transparent h-9">

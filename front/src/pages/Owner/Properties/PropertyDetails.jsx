@@ -19,7 +19,7 @@ export default function PropertyDetails() {
   const { data: property, isLoading: loadingProperty, isError, error } = useProperty(id);
   const { mutateAsync: createTour, isPending: isBooking } = useCreateTour();
   const { user, isLoading: loadingAuth } = useAuth();
-  const { isAuthenticated, isAdmin, isBuyer, isAuthLoading } = useContextAuth();
+  const { isAuthenticated, isAdmin, isAgent, isOwner, isBuyer, isAuthLoading } = useContextAuth();
   const navigate = useNavigate();
 
   const canEdit = !isAuthLoading && !loadingProperty && property

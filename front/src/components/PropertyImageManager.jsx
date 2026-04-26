@@ -34,6 +34,14 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
   const uploadMutation = useUploadPropertyImages();
   const deleteMutation = useDeletePropertyImage();
 
+  const getApiErrorMessage = (err, fallback = "Request failed.") => {
+    const data = err?.data;
+    if (typeof data?.detail === "string" && data.detail.trim()) return data.detail;
+    if (Array.isArray(data?.image) && data.image[0]) return data.image[0];
+    if (typeof err?.message === "string" && err.message.trim()) return err.message;
+    return fallback;
+  };
+
   // ── Expose uploadAll for parent (PropertyCreate) ──────────────────────────
   React.useImperativeHandle(ref, () => ({
     async uploadAll(pid) {
@@ -46,8 +54,8 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
         });
         notify.success(`${localFiles.length} image(s) uploaded.`);
         setLocalFiles([]);
-      } catch {
-        notify.error("Some images failed to upload.");
+      } catch (err) {
+        notify.error(getApiErrorMessage(err, "Some images failed to upload."));
       } finally {
         setUploading(false);
       }
@@ -59,9 +67,15 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
     const picked = Array.from(e.target.files || []);
     if (!picked.length) return;
 
+    const allowedMimeTypes = ["image/jpeg", "image/jpg", "image/webp"];
+    const allowedExtensions = [".jpg", ".jpeg", ".webp"];
     const valid = picked.filter(f => {
       if (f.size > 10 * 1024 * 1024) { notify.error(`${f.name} exceeds 10 MB.`); return false; }
-      if (!f.type.startsWith("image/")) { notify.error(`${f.name} is not an image.`); return false; }
+      const extension = f.name.slice(f.name.lastIndexOf(".")).toLowerCase();
+      if (!allowedExtensions.includes(extension) || !allowedMimeTypes.includes(f.type)) {
+        notify.error(`${f.name} must be JPG, JPEG, or WebP.`);
+        return false;
+      }
       return true;
     });
 
@@ -77,7 +91,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
         { propertyId, images: valid },
         {
           onSuccess: () => notify.success(`${valid.length} image(s) uploaded.`),
-          onError: () => notify.error("Upload failed."),
+          onError: (err) => notify.error(getApiErrorMessage(err, "Upload failed.")),
           onSettled: () => setUploading(false),
         }
       );
@@ -120,7 +134,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
                   <Star className="w-2.5 h-2.5" /> Primary
                 </div>
               )}
-              {isAdmin && (
+              {canManageImages && (
                 <button
                   type="button"
                   onClick={() => deleteExisting(img.id)}
@@ -174,7 +188,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
         >
           <ImagePlus className="w-10 h-10 mb-2 text-blue-400" />
           <p className="text-sm font-semibold">Click to add photos</p>
-          <p className="text-xs text-blue-400 mt-1">JPG, PNG, WebP · max 10 MB each · first image = primary</p>
+          <p className="text-xs text-blue-400 mt-1">JPG, JPEG, WebP · max 10 MB each · first image = primary</p>
         </div>
       )}
 
