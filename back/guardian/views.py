@@ -7,11 +7,11 @@ from listings.models import Property
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from core.authentication import CookieJWTAuthentication
 from core.permissions import IsAdminGroup
 
 class PropertyStateTransitionView(APIView):
-	authentication_classes = [JWTAuthentication]
+	authentication_classes = [CookieJWTAuthentication]
 	permission_classes = [IsAdminGroup]
 
 	def post(self, request, pk):

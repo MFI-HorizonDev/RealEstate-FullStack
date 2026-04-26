@@ -192,7 +192,7 @@ export default function Profile() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept=".jpg,.jpeg,.webp,image/jpeg,image/webp"
                 onChange={handleImageUpload}
                 className="hidden"
                 disabled={uploadProfileImage.isPending}

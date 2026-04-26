@@ -30,6 +30,7 @@ export const useLogin = () => {
     mutationFn: async ({ email, password }) => {
       const response = await fetch(`${BASE_URL}/api/token/`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -48,8 +49,9 @@ export const useLogin = () => {
       return data;
     },
     onSuccess: (data) => {
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("refresh", data.refresh);
+      // Temporary compatibility during cookie auth migration.
+      if (data?.access) localStorage.setItem("access", data.access);
+      if (data?.refresh) localStorage.setItem("refresh", data.refresh);
       window.dispatchEvent(new Event("auth-changed"));
       queryClient.invalidateQueries({ queryKey: ["user"] });
     },
@@ -58,11 +60,10 @@ export const useLogin = () => {
 
 // Hook to fetch current user profile
 export const useUser = () => {
-  const isLoggedIn = isUserLoggedIn();
   return useQuery({
     queryKey: ["user"],
     queryFn: () => apiGet("/me/"),
-    enabled: isLoggedIn,
+    enabled: true,
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: false,
   });
@@ -84,7 +85,7 @@ export const useAuth = () => {
     isLoading, 
     isError,
     logout: logoutUser,
-    isLoggedIn: isUserLoggedIn(),
+    isLoggedIn: !isLoading && Boolean(user),
     isSuperAdmin: user?.is_superuser || false,
     groups: user?.groups || [],
   };
@@ -96,6 +97,7 @@ export const useSignup = () => {
     mutationFn: async (userData) => {
       const response = await fetch(`${BASE_URL}/api/register/`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -110,6 +112,9 @@ export const useSignup = () => {
         throw err;
       }
 
+      if (data?.access) localStorage.setItem("access", data.access);
+      if (data?.refresh) localStorage.setItem("refresh", data.refresh);
+      window.dispatchEvent(new Event("auth-changed"));
       return data;
     },
   });
@@ -117,6 +122,10 @@ export const useSignup = () => {
 
 // Logout
 export const logout = () => {
+  fetch(`${BASE_URL}/api/logout/`, {
+    method: "POST",
+    credentials: "include",
+  }).catch(() => {});
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
   window.dispatchEvent(new Event("auth-changed"));

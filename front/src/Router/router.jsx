@@ -11,7 +11,6 @@ import Login from "../login/login";
 import Signup from "../login/signup";
 import Notfound from "../notfound";
 import App from "../App";
-import AuthDebug from "../pages/AuthDebug";
 
 // Public / shared
 import Profile from "../pages/Profile";
@@ -140,6 +139,5 @@ export let routes = createBrowserRouter([
   { path: "test-pagination", element: dash(<TestPagination />) },
   { path: "login",      element: <GuestOnlyRoute><Login /></GuestOnlyRoute> },
   { path: "signup",     element: <GuestOnlyRoute><Signup /></GuestOnlyRoute> },
-  { path: "auth-debug", element: <AuthDebug /> },
   { path: "*",          element: <Notfound /> },
 ]);

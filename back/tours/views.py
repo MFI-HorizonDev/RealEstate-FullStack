@@ -1,8 +1,9 @@
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from core.authentication import CookieJWTAuthentication
+from core.throttles import TourWriteThrottle
 from core.permissions import IsBuyerGroup
 from .models import Tour
 from .serializers import TourAgentActionSerializer, TourManageSerializer, TourSerializer
@@ -10,7 +11,8 @@ from .serializers import TourAgentActionSerializer, TourManageSerializer, TourSe
 
 class TourListCreateView(generics.ListCreateAPIView):
     serializer_class = TourSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
+    throttle_classes = [TourWriteThrottle]
 
     def get_permissions(self):
         if self.request.method == "POST":
@@ -48,7 +50,7 @@ class TourListCreateView(generics.ListCreateAPIView):
 
 class TourRetrieveView(generics.RetrieveAPIView):
     serializer_class = TourSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
@@ -82,7 +84,8 @@ class IsAgentOrAdminForTourAction(permissions.BasePermission):
 class TourAgentActionView(generics.UpdateAPIView):
     queryset = Tour.objects.filter(status=Tour.STATUS_QUEUED)
     serializer_class = TourAgentActionSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
+    throttle_classes = [TourWriteThrottle]
     permission_classes = [IsAgentOrAdminForTourAction]
     http_method_names = ["patch", "head", "options"]
 
@@ -98,7 +101,8 @@ class TourAgentActionView(generics.UpdateAPIView):
 
 class TourManageView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = TourManageSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
+    throttle_classes = [TourWriteThrottle]
     permission_classes = [IsAgentOrAdminForTourAction]
     http_method_names = ["get", "patch", "delete", "head", "options"]
 

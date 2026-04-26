@@ -1,5 +1,4 @@
 from rest_framework import generics, permissions
-from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.exceptions import ValidationError
 from django.db import transaction, IntegrityError
 from decimal import Decimal
@@ -9,7 +8,9 @@ from .serializers import (
     PendingSaleRequestSerializer
 )
 from listings.models import Property
+from core.authentication import CookieJWTAuthentication
 from core.permissions import IsAdminGroupOnly
+from core.throttles import PendingSaleWriteThrottle, SaleWriteThrottle
 
 class IsPropertyOwnerOrAgent(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -39,7 +40,7 @@ class IsPropertyOwnerOrAgent(permissions.BasePermission):
 
 class SaleListView(generics.ListAPIView):
     serializer_class = SaleSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsPropertyOwnerOrAgent]
 
     def get_queryset(self):
@@ -53,8 +54,9 @@ class SaleListView(generics.ListAPIView):
 
 class SaleCreateView(generics.CreateAPIView):
     serializer_class = SaleCreateSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsPropertyOwnerOrAgent]
+    throttle_classes = [SaleWriteThrottle]
 
     def perform_create(self, serializer):
         with transaction.atomic():
@@ -97,27 +99,29 @@ class SaleCreateView(generics.CreateAPIView):
 class SaleRetrieveView(generics.RetrieveAPIView):
     queryset = Sale.objects.all()
     serializer_class = SaleSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsPropertyOwnerOrAgent]
 
 
 class SaleUpdateView(generics.UpdateAPIView):
     queryset = Sale.objects.all()
     serializer_class = SaleSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
+    throttle_classes = [SaleWriteThrottle]
     permission_classes = [IsPropertyOwnerOrAgent]
 
 
 class SaleDeleteView(generics.DestroyAPIView):
     queryset = Sale.objects.all()
     serializer_class = SaleSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
+    throttle_classes = [SaleWriteThrottle]
     permission_classes = [IsPropertyOwnerOrAgent]
 
 
 class PendingSaleRequestListView(generics.ListAPIView):
     serializer_class = PendingSaleRequestSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroupOnly]
 
     def get_queryset(self):
@@ -127,15 +131,16 @@ class PendingSaleRequestListView(generics.ListAPIView):
 class PendingSaleRequestRetrieveView(generics.RetrieveAPIView):
     queryset = PendingSaleRequest.objects.all()
     serializer_class = PendingSaleRequestSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroupOnly]
 
 
 class PendingSaleRequestUpdateView(generics.UpdateAPIView):
     queryset = PendingSaleRequest.objects.all()
     serializer_class = PendingSaleRequestSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
     permission_classes = [IsAdminGroupOnly]
+    throttle_classes = [PendingSaleWriteThrottle]
 
     def perform_update(self, serializer):
         previous_status = serializer.instance.status
@@ -163,5 +168,6 @@ class PendingSaleRequestUpdateView(generics.UpdateAPIView):
 class AdminSaleApprovalView(generics.UpdateAPIView):
     queryset = Sale.objects.filter(approval_status='PENDING_REVIEW')
     serializer_class = SaleSerializer
-    authentication_classes = [JWTAuthentication]
+    authentication_classes = [CookieJWTAuthentication]
+    throttle_classes = [PendingSaleWriteThrottle]
     permission_classes = [IsAdminGroupOnly]
