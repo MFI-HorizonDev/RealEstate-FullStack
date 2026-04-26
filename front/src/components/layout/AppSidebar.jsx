@@ -62,7 +62,7 @@ export function AppSidebar() {
 
   const agentItems = isAgent ? [
     { title: "Agent Dashboard",     url: "/agent/dashboard",        icon: LayoutDashboard },
-    { title: "My Listings",         url: "/owner/listings",         icon: Building2 },
+    { title: "My Listings",         url: "/agent/properties",       icon: Building2 },
     { title: "My Tours",            url: "/tours",                  icon: CalendarDays },
     { title: "Create Listing",      url: "/properties/create",      icon: PlusCircle },
     ...(canAdminFromContext ? [{ title: "My Commissions", url: "/agent/commissions", icon: DollarSign }] : []),
