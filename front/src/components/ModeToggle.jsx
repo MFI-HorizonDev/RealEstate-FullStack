@@ -4,7 +4,7 @@ import { useTheme } from "@/context/ThemeProvider";
 
 export default function ModeToggle({ variant = "navbar" }) {
   const { theme, setTheme } = useTheme();
-  const isDark = theme === "dark";
+  const isDark = theme === "dark" || (theme === "system" && typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
   // Navbar variant: sits on the primary-colored navbar
   // Dashboard variant: sits on the bg-background header
