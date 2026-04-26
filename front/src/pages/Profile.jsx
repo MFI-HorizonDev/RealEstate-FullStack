@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '@/services/api/useAuth';
-import { useUserProfile, useUploadProfileImage, useUpdateProfile } from '@/services/api/useProfile';
+import { useAuth } from "@/hooks/api/authentication/useAuth";
+import { useUserProfile } from "@/hooks/api/profile/UseGetProfile";
+import { useUploadProfileImage } from "@/hooks/api/profile/UseUploadProfile";
+import { useUpdateProfile } from "@/hooks/api/profile/UseUpdateProfile";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -9,8 +11,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { User, Mail, Camera } from "lucide-react";
-import { toast } from 'sonner';
+import { notify } from "@/lib/notifications";
 import ImageCropperModal from '@/components/ImageCropperModal';
+import { BASE_URL } from "@/hooks/api/config";
 
 export default function Profile() {
   const { user } = useAuth();
@@ -50,17 +53,22 @@ export default function Profile() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <p className="text-gray-500">Please log in to view your profile.</p>
+        <p className="text-muted-foreground">Please log in to view your profile.</p>
       </div>
     );
   }
+
+  const displayFirstName = profile?.first_name || user.first_name;
+  const displayLastName = profile?.last_name || user.last_name;
+  const displayEmail = profile?.email || user.email;
+  const displayGroups = profile?.groups || user.groups || [];
 
   const initials = `${user.first_name?.[0] || user.username?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase();
   
   // Handle both absolute and relative image URLs
   let profileImage = profile?.profile?.profile_image;
   if (profileImage && !profileImage.startsWith('http')) {
-    profileImage = `http://localhost:8000${profileImage}`;
+    profileImage = `${BASE_URL}${profileImage}`;
   }
 
   const handleImageUpload = (e) => {
@@ -68,20 +76,14 @@ export default function Profile() {
     if (file) {
       // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('File too large', {
-          description: 'Image size must be less than 5MB',
-          duration: 3000,
-        });
+        notify.error('File too large. Image size must be less than 5MB.');
         return;
       }
 
       // Validate file type
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!validTypes.includes(file.type)) {
-        toast.error('Invalid file type', {
-          description: 'Please upload a valid image file (JPG, PNG, GIF, or WebP)',
-          duration: 3000,
-        });
+        notify.error('Invalid file type. Please upload a valid image file (JPG, PNG, GIF, or WebP).');
         return;
       }
 
@@ -101,25 +103,21 @@ export default function Profile() {
     // Upload the cropped image
     uploadProfileImage.mutate(croppedFile, {
       onSuccess: () => {
-        toast.success('✓ Profile picture updated successfully!', {
-          description: 'Your new profile picture is now live.',
-          duration: 3000,
-        });
+        notify.success('Profile picture updated successfully!');
         setShowImageCropper(false);
         setSelectedImageFile(null);
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
+        // Notify other components to refresh
+        window.dispatchEvent(new Event('profile-updated'));
         // Refetch profile data to get the updated image URL
         setTimeout(() => {
           refetch();
         }, 500);
       },
       onError: (error) => {
-        toast.error('Failed to upload image', {
-          description: error.message || 'Please try again.',
-          duration: 3000,
-        });
+        notify.error(error.message || 'Failed to upload image. Please try again.');
         setShowImageCropper(false);
         setSelectedImageFile(null);
       },
@@ -135,24 +133,25 @@ export default function Profile() {
   };
 
   const handleSaveProfile = () => {
-    const formData = new FormData();
-    formData.append("email", profileFormData.email || "");
-    formData.append("bio", profileFormData.bio || "");
-    formData.append("phone_number", profileFormData.phone_number || "");
-    formData.append("address", profileFormData.address || "");
-    formData.append("city", profileFormData.city || "");
-    formData.append("state", profileFormData.state || "");
-    formData.append("country", profileFormData.country || "");
-    formData.append("zipcode", profileFormData.zipcode || "");
-
-    updateProfile.mutate(formData, {
+    updateProfile.mutate({
+      email: profileFormData.email || "",
+      bio: profileFormData.bio || "",
+      phone_number: profileFormData.phone_number || "",
+      address: profileFormData.address || "",
+      city: profileFormData.city || "",
+      state: profileFormData.state || "",
+      country: profileFormData.country || "",
+      zipcode: profileFormData.zipcode || "",
+    }, {
       onSuccess: () => {
-        toast.success("Profile updated.");
+        notify.success("Profile updated successfully.");
         setIsEditingProfile(false);
+        // Notify other components to refresh
+        window.dispatchEvent(new Event('profile-updated'));
         refetch();
       },
       onError: (error) => {
-        toast.error(error?.message || "Failed to update profile.");
+        notify.apiError(error, "Failed to update profile.");
       },
     });
   };
@@ -160,8 +159,8 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Account Profile</h1>
-        <p className="mt-2 text-lg text-gray-500">Manage your personal information and security settings.</p>
+        <h1 className="text-3xl font-extrabold text-foreground tracking-tight">Account Profile</h1>
+        <p className="mt-2 text-lg text-muted-foreground">Manage your personal information and security settings.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -202,13 +201,13 @@ export default function Profile() {
               <p className="text-sm text-blue-200 mb-2">Uploading image...</p>
             )}
             <CardTitle className="text-white text-2xl font-bold">
-              {user.first_name} {user.last_name}
+              {displayFirstName} {displayLastName}
             </CardTitle>
             <CardDescription className="text-blue-200 font-medium">@{user.username}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 pb-10">
             <div className="flex flex-wrap gap-2 justify-center">
-              {user.groups?.map(group => (
+              {displayGroups?.map(group => (
                 <Badge key={group} className="bg-blue-800/50 text-white border-blue-700 hover:bg-blue-700 px-3 py-1">
                   {group}
                 </Badge>
@@ -221,37 +220,37 @@ export default function Profile() {
         </Card>
 
         {/* Details Card */}
-        <Card className="md:col-span-2 shadow-sm border border-gray-100">
-          <CardHeader className="border-b border-gray-50">
-            <CardTitle className="text-xl font-bold text-gray-900">Personal Details</CardTitle>
+        <Card className="md:col-span-2 shadow-sm border border-border">
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-xl font-bold text-foreground">Personal Details</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="space-y-8">
               <div className="flex items-start gap-4">
-                <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
+                <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                   <User className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Full Name</p>
-                  <p className="text-gray-900 font-semibold text-lg">
-                    {user.first_name || 'Not provided'} {user.last_name || ''}
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Full Name</p>
+                  <p className="text-foreground font-semibold text-lg">
+                    {displayFirstName || 'Not provided'} {displayLastName || ''}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-start gap-4">
-                <div className="p-2 bg-gray-50 rounded-lg text-gray-400">
+                <div className="p-2 bg-muted rounded-lg text-muted-foreground">
                   <Mail className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Email Address</p>
-                  <p className="text-gray-900 font-semibold text-lg">{user.email || 'Not provided'}</p>
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Email Address</p>
+                  <p className="text-foreground font-semibold text-lg">{displayEmail || 'Not provided'}</p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-gray-100">
+              <div className="pt-4 border-t border-border">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="font-semibold text-gray-900">Profile Info</p>
+                  <p className="font-semibold text-foreground">Profile Info</p>
                   <Button
                     variant="outline"
                     onClick={() => setIsEditingProfile((v) => !v)}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useValuationPreview } from "../../../services/api/useValuationPreview";
+import { useValuationPreview } from "@/hooks/api/useValuationPreview";
 import { useAuth } from "@/context/AuthContext";
 
 export default function AddProperties() {

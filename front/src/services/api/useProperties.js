@@ -1,5 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiPost, apiPatch } from "./apiClient";
+import { apiGet, apiPost, apiPatch, fetchWithAuth } from "./apiClient";
+import { BASE_URL } from "./config";
 
 const normalizeOptions = (pageOrOptions) => {
   if (typeof pageOrOptions === "number") {
@@ -80,7 +81,6 @@ export function useUpdateProperty(id) {
  */
 export function useUploadPropertyImages() {
   const queryClient = useQueryClient();
-  const BASE_URL = "http://127.0.0.1:8000";
 
   return useMutation({
     mutationFn: async ({ propertyId, images }) => {
@@ -90,12 +90,8 @@ export function useUploadPropertyImages() {
         // Only mark the very first image as primary
         formData.append("is_primary", index === 0 ? "true" : "false");
 
-        return fetch(`${BASE_URL}/api/properties/${propertyId}/images/create/`, {
+        return fetchWithAuth(`${BASE_URL}/api/properties/${propertyId}/images/create/`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${localStorage.getItem("access")}`,
-            // Do NOT set Content-Type — browser sets it with the correct boundary for multipart
-          },
           body: formData,
         }).then(async (res) => {
           if (!res.ok) {
@@ -120,15 +116,11 @@ export function useUploadPropertyImages() {
  */
 export function useDeletePropertyImage() {
   const queryClient = useQueryClient();
-  const BASE_URL = "http://127.0.0.1:8000";
 
   return useMutation({
     mutationFn: async (imageId) => {
-      const response = await fetch(`${BASE_URL}/api/images/${imageId}/delete/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/images/${imageId}/delete/`, {
         method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
-        },
       });
 
       if (!response.ok) {
@@ -149,21 +141,17 @@ export function useDeletePropertyImage() {
  */
 export function useUpdatePropertyImage() {
   const queryClient = useQueryClient();
-  const BASE_URL = "http://127.0.0.1:8000";
 
   return useMutation({
     mutationFn: async ({ imageId, data }) => {
-      const response = await fetch(`${BASE_URL}/api/images/${imageId}/update/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/images/${imageId}/update/`, {
         method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("access")}`,
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       if (!response.ok) throw new Error("Update failed");
-      return response.json();
+      try { return await response.json(); } catch { return null; }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["properties"] });

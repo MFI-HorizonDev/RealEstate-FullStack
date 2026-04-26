@@ -42,12 +42,12 @@ function BreadcrumbLink({
   className,
   ...props
 }) {
-  const Comp = asChild ? Slot.Root : "a"
+  const Comp = asChild ? Slot.Root : "a";
 
   return (
     <Comp
       data-slot="breadcrumb-link"
-      className={cn("transition-colors hover:text-foreground", className)}
+      className={cn("transition-colors hover:text-foreground cursor-pointer", className)}
       {...props} />
   );
 }

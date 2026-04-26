@@ -9,6 +9,8 @@ def is_verified_creator(user):
     return user.groups.filter(name__in=["Verified Agents", "Verified Owners"]).exists()
 
 
+from django.conf import settings
+
 class BaseCreatorCooldownThrottle(BaseThrottle):
     scope = "creator"
     cooldown_seconds = 0
@@ -23,10 +25,11 @@ class BaseCreatorCooldownThrottle(BaseThrottle):
         return f"throttle:{self.scope}:user:{user.pk}"
 
     def allow_request(self, request, view):
+        # Skip throttling in DEBUG mode if needed, but let's just keep it active with lower values
         if request.method != "POST":
             return True
         user = request.user
-        if not user or not user.is_authenticated:
+        if not user or not user.is_authenticated or user.is_superuser:
             return True
 
         if not self.applies_to_user(user):
@@ -54,7 +57,8 @@ class BaseCreatorCooldownThrottle(BaseThrottle):
 
 class VerifiedAgentThrottle(BaseCreatorCooldownThrottle):
     scope = "verified_creator"
-    cooldown_seconds = 5 * 60
+    # Reduced from 5m to 30s
+    cooldown_seconds = 30
 
     def applies_to_user(self, user):
         return is_verified_creator(user)
@@ -62,7 +66,8 @@ class VerifiedAgentThrottle(BaseCreatorCooldownThrottle):
 
 class UnverifiedAgentThrottle(BaseCreatorCooldownThrottle):
     scope = "unverified_creator"
-    cooldown_seconds = 30 * 60
+    # Reduced from 30m to 2m
+    cooldown_seconds = 2 * 60
 
     def applies_to_user(self, user):
         return not is_verified_creator(user)

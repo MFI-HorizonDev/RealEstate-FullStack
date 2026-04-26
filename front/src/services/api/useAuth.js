@@ -1,8 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet } from "./apiClient";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, fetchWithAuth } from "./apiClient";
+import { BASE_URL } from "./config";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 
-const BASE_URL = "http://127.0.0.1:8000";
+const isTokenLike = (token) => typeof token === "string" && token.split(".").length === 3;
 
 const normalizeToken = (value) => {
   if (typeof value !== "string") return null;
@@ -22,37 +23,49 @@ const normalizeToken = (value) => {
   return trimmed;
 };
 
-const isTokenLike = (token) => typeof token === "string" && token.split(".").length === 3;
+const setTokenCookie = (key, value) => {
+  document.cookie = `${key}=${encodeURIComponent(value)}; path=/; SameSite=Strict`;
+};
+
+const clearTokenCookie = (key) => {
+  document.cookie = `${key}=; path=/; SameSite=Strict; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+};
+
+const getCookieToken = (key) => {
+  const cookieName = `${key}=`;
+  for (const part of document.cookie.split(";")) {
+    const cookie = part.trim();
+    if (cookie.startsWith(cookieName))
+      return normalizeToken(decodeURIComponent(cookie.slice(cookieName.length)));
+  }
+  return null;
+};
 
 // Login hook - uses TanStack Query mutation
 export const useLogin = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ email, password }) => {
-      const response = await fetch(`${BASE_URL}/api/token/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/token/`, {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username: email,
-          password: password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: email, password }),
       });
 
-      const data = await response.json();
+      let data = null;
+      try { data = await response.json(); } catch { /* empty body */ }
 
       if (!response.ok) {
-        throw new Error(data.detail || data.non_field_errors?.[0] || "Login failed");
+        throw new Error(data?.detail || data?.non_field_errors?.[0] || "Login failed");
       }
 
       return data;
     },
     onSuccess: (data) => {
-      // Temporary compatibility during cookie auth migration.
       if (data?.access) localStorage.setItem("access", data.access);
       if (data?.refresh) localStorage.setItem("refresh", data.refresh);
+      if (isTokenLike(data.access))  setTokenCookie("access", data.access);
+      if (isTokenLike(data.refresh)) setTokenCookie("refresh", data.refresh);
       window.dispatchEvent(new Event("auth-changed"));
       queryClient.invalidateQueries({ queryKey: ["user"] });
     },
@@ -96,19 +109,17 @@ export const useAuth = () => {
 export const useSignup = () => {
   return useMutation({
     mutationFn: async (userData) => {
-      const response = await fetch(`${BASE_URL}/api/register/`, {
+      const response = await fetchWithAuth(`${BASE_URL}/api/register/`, {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
 
-      const data = await response.json();
+      let data = null;
+      try { data = await response.json(); } catch { /* empty body */ }
 
       if (!response.ok) {
-        const err = new Error(data.detail || "Registration failed");
+        const err = new Error(data?.detail || "Registration failed");
         err.data = data;
         throw err;
       }
@@ -129,14 +140,26 @@ export const logout = () => {
   }).catch(() => {});
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
+  clearTokenCookie("access");
+  clearTokenCookie("refresh");
   window.dispatchEvent(new Event("auth-changed"));
 };
 
 // Check if user is logged in
 export const isUserLoggedIn = () => {
-  const accessToken = normalizeToken(localStorage.getItem("access"));
-  const refreshToken = normalizeToken(localStorage.getItem("refresh"));
-  return isTokenLike(accessToken) || isTokenLike(refreshToken);
+  const fromCookie = (key) => {
+    const cookieName = `${key}=`;
+    for (const part of document.cookie.split(";")) {
+      const c = part.trim();
+      if (c.startsWith(cookieName))
+        return normalizeToken(decodeURIComponent(c.slice(cookieName.length)));
+    }
+    return null;
+  };
+  // Check cookies first, fall back to localStorage for backward compat
+  const access  = fromCookie("access")  || normalizeToken(localStorage.getItem("access"));
+  const refresh = fromCookie("refresh") || normalizeToken(localStorage.getItem("refresh"));
+  return isTokenLike(access) || isTokenLike(refresh);
 };
 
 // Helper functions for permission checking

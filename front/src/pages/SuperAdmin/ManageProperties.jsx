@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiGet, apiDelete, apiPatch } from "@/services/api/apiClient";
-import { useAuth } from "@/services/api/useAuth";
+import { apiGet, apiDelete, apiPatch } from "@/hooks/api/apiClient";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,16 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Building2, Trash2, Search, CheckCircle2, XCircle } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notifications";
 
 const peso = (v) => new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", maximumFractionDigits: 0 }).format(Number(v || 0));
 
 const STATUS_COLORS = {
-  ACTIVE: "bg-green-100 text-green-800 border-green-200",
-  UNDER_REVIEW: "bg-amber-100 text-amber-800 border-amber-200",
-  REJECTED: "bg-red-100 text-red-800 border-red-200",
-  SOLD: "bg-blue-100 text-blue-800 border-blue-200",
-  INACTIVE: "bg-gray-100 text-gray-700 border-gray-200",
+  ACTIVE: "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
+  UNDER_REVIEW: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700",
+  REJECTED: "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700",
+  SOLD: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+  INACTIVE: "bg-muted text-muted-foreground border-border",
 };
 
 export default function ManageProperties() {
@@ -35,14 +35,14 @@ export default function ManageProperties() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => apiDelete(`/admin/properties/${id}/`),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-properties"] }); toast.success("Property deleted."); },
-    onError: () => toast.error("Failed to delete property."),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-properties"] }); notify.success("Property deleted."); },
+    onError: () => notify.error("Failed to delete property."),
   });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }) => apiPatch(`/properties/${id}/admin-status/`, { status }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-properties"] }); toast.success("Status updated."); },
-    onError: () => toast.error("Failed to update status."),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-properties"] }); notify.success("Status updated."); },
+    onError: () => notify.error("Failed to update status."),
   });
 
   const properties = Array.isArray(data) ? data : data?.results ?? [];
@@ -53,8 +53,8 @@ export default function ManageProperties() {
   return (
     <div className="max-w-7xl mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Manage Properties</h1>
-        <p className="text-gray-500 mt-1">Full control over all property listings.</p>
+        <h1 className="text-3xl font-bold text-foreground">Manage Properties</h1>
+        <p className="text-muted-foreground mt-1">Full control over all property listings.</p>
       </div>
 
       {/* Stats */}
@@ -66,8 +66,8 @@ export default function ManageProperties() {
           { label: "Rejected", value: properties.filter(p => p.status === "REJECTED").length },
         ].map(({ label, value }) => (
           <Card key={label}><CardContent className="pt-5 pb-4">
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
           </CardContent></Card>
         ))}
       </div>
@@ -76,41 +76,44 @@ export default function ManageProperties() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-800" /> All Properties</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Building2 className="w-5 h-5 text-primary" /> All Properties</CardTitle>
               <CardDescription>{filtered.length} properties found</CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input placeholder="Search properties..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
             </div>
           </div>
         </CardHeader>
         <CardContent>
           {isLoading && <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</div>}
-          {isError && <p className="text-red-600 text-sm">Failed to load properties.</p>}
+          {isError && <p className="text-destructive text-sm">Failed to load properties.</p>}
           {!isLoading && filtered.length === 0 && (
-            <div className="text-center py-16"><Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No properties found.</p></div>
+            <div className="text-center py-16">
+              <Building2 className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground">No properties found.</p>
+            </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border border-gray-100">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
                   {["ID", "Name", "Municipality", "Price", "Type", "Status", "Actions"].map(h => (
-                    <th key={h} className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wide">{h}</th>
+                    <th key={h} className="px-4 py-3 text-left font-semibold text-muted-foreground text-xs uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map(p => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 text-gray-500 font-mono text-xs">#{p.id}</td>
-                    <td className="px-4 py-3 font-semibold text-gray-900 max-w-[160px] truncate">{p.property_name}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{p.property_municipality?.municipality_name || "—"}</td>
-                    <td className="px-4 py-3 font-bold text-blue-900 text-xs">{p.price ? peso(p.price) : "TBD"}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs">{p.type}</td>
+                  <tr key={p.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs">#{p.id}</td>
+                    <td className="px-4 py-3 font-semibold text-foreground max-w-[160px] truncate">{p.property_name}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{p.property_municipality?.municipality_name || "—"}</td>
+                    <td className="px-4 py-3 font-bold text-primary text-xs">{p.price ? peso(p.price) : "TBD"}</td>
+                    <td className="px-4 py-3 text-muted-foreground text-xs">{p.type}</td>
                     <td className="px-4 py-3">
-                      <Badge variant="outline" className={`${STATUS_COLORS[p.status] || "bg-gray-100 text-gray-700"} text-[10px] font-bold`}>
+                      <Badge variant="outline" className={`${STATUS_COLORS[p.status] || "bg-muted text-muted-foreground"} text-[10px] font-bold`}>
                         {p.status}
                       </Badge>
                     </td>
@@ -131,7 +134,7 @@ export default function ManageProperties() {
                           </>
                         )}
                         {isAdmin && (
-                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50 gap-1"
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs text-red-500 border-red-300 hover:bg-red-500/10 gap-1"
                             onClick={() => { if (confirm(`Delete "${p.property_name}"?`)) deleteMutation.mutate(p.id); }}
                             disabled={deleteMutation.isPending}>
                             <Trash2 className="w-3 h-3" />

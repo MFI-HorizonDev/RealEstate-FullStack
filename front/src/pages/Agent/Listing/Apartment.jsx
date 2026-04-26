@@ -1,5 +1,5 @@
 import React from 'react';
-import { useProperties } from '../../../services/api/useProperties';
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
 
 export default function Apartment() {
   const token = localStorage.getItem("access");

@@ -1,10 +1,13 @@
 import React from "react";
-import { useProperties } from "../../services/api/useProperties";
-import { useAuth } from "../../services/api/useAuth";
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { House, BedDouble, Bath, Ruler, MapPin, TrendingUp, Building2 } from "lucide-react";
+import { BASE_URL } from "@/hooks/api/config";
+
+const DEFAULT_PROPERTY_IMAGE = `${BASE_URL}/media/propertyimg/default.jpg`;
 
 function StatusBadge({ status }) {
   const colors = {
@@ -143,7 +146,7 @@ export default function AgentDashboard() {
                     />
                   ) : (
                     <img
-                      src="https://via.placeholder.com/800x600?text=No+Image+Available"
+                      src={DEFAULT_PROPERTY_IMAGE}
                       alt="No image available"
                       className="w-full h-full object-cover"
                     />

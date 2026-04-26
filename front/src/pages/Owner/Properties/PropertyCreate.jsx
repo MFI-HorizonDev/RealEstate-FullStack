@@ -1,8 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useCreateProperty } from "@/services/api/useProperties";
-import { useMunicipalities } from "@/services/api/useMunicipalities";
-import { useAuth } from "@/services/api/useAuth";
+import { useCreateProperty } from "@/hooks/api/properties/UseProperties";
+import { useValuationPreviewPOST } from "@/hooks/api/properties/UseValuationPreview";
+import { useMunicipalities } from "@/hooks/api/municipalities/UseGetMunicipalities";
 import { useAuth as useContextAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,16 +11,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import SuccessModal from "@/components/ui/SuccessModal";
 import PropertyImageManager from "@/components/PropertyImageManager";
+import { API_BASE_URL } from "@/hooks/api/config";
+import { notify } from "@/lib/notifications";
 import {
   Building2, MapPin, Ruler, AlertCircle, CheckCircle2,
-  ImagePlus, BedDouble, Bath, Layers, Plus, Trash2,
-  Sofa, Star, ToggleLeft,
+  ImagePlus, BedDouble, Bath, Layers, Plus, Trash2, Sofa, Zap,
 } from "lucide-react";
 
 const LISTING_TYPES = [
-  { value: "SALE",        label: "For Sale" },
-  { value: "RENT",        label: "For Rent" },
+  { value: "SALE", label: "For Sale" },
+  { value: "RENT", label: "For Rent" },
 ];
 
 const PROPERTY_CATEGORIES = [
@@ -41,10 +43,10 @@ const emptyAmenity = () => ({ name: "", amenity_type: "Basic", price: "" });
 
 export default function PropertyCreate() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { isAdmin, isAgent, isOwner } = useContextAuth();
   const { mutateAsync: createProperty, isPending } = useCreateProperty();
   const { data: municipalities = [] } = useMunicipalities();
+  const { mutate: getValuation, data: valuation, isPending: isLoadingValuation } = useValuationPreviewPOST();
   const imageManagerRef = useRef(null);
 
   const [formData, setFormData] = useState({
@@ -56,163 +58,230 @@ export default function PropertyCreate() {
     price: "",
     type: "SALE",
     category: "HOUSE_AND_LOT",
+    condition: "GOOD",
+    location_quality: "SUBURBAN",
     building_size: "",
     num_bedrooms: "0",
     num_bathrooms: "1",
     is_available_for_tour: false,
-    // extra UI-only field (not sent to backend)
     num_floors: "",
     parking_slots: "",
     year_built: "",
   });
 
-  const [amenities, setAmenities] = useState([]);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const PROPERTY_CONDITIONS = [
+    { value: "NEW", label: "New / Excellent" },
+    { value: "GOOD", label: "Good" },
+    { value: "FAIR", label: "Fair" },
+    { value: "POOR", label: "Poor / Needs Renovation" },
+  ];
 
-  // ── Amenity helpers ──────────────────────────────────────────────────────
+  const LOCATION_QUALITIES = [
+    { value: "PREMIUM", label: "Premium (CBD / Elite)" },
+    { value: "URBAN", label: "Urban (Central)" },
+    { value: "SUBURBAN", label: "Suburban" },
+    { value: "RURAL", label: "Rural" },
+  ];
+
+  // Auto-refresh valuation preview
+  useEffect(() => {
+    if (!formData.property_municipality || !formData.property_size || formData.type === "RENT") return;
+    
+    const timer = setTimeout(() => {
+      getValuation({
+        property_municipality: formData.property_municipality,
+        property_size: formData.property_size,
+        category: formData.category,
+        condition: formData.condition,
+        location_quality: formData.location_quality,
+        building_size: formData.building_size || 0,
+        type: formData.type
+      });
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [
+    formData.property_municipality,
+    formData.property_size,
+    formData.category,
+    formData.condition,
+    formData.location_quality,
+    formData.building_size,
+    formData.type
+  ]);
+  const [amenities, setAmenities] = useState([]);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [error, setError] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdPropertyId, setCreatedPropertyId] = useState(null);
+
+  const isLotListing = formData.category === "LOT";
+  const canCreate = isAgent || isOwner || isAdmin;
+
   const addAmenity = (name = "") => {
-    setAmenities(prev => [...prev, { ...emptyAmenity(), name }]);
+    setAmenities((prev) => [...prev, { ...emptyAmenity(), name }]);
   };
 
   const updateAmenity = (idx, field, value) => {
-    setAmenities(prev => prev.map((a, i) => i === idx ? { ...a, [field]: value } : a));
+    setAmenities((prev) => prev.map((amenity, index) => (index === idx ? { ...amenity, [field]: value } : amenity)));
   };
 
   const removeAmenity = (idx) => {
-    setAmenities(prev => prev.filter((_, i) => i !== idx));
+    setAmenities((prev) => prev.filter((_, index) => index !== idx));
   };
 
   const togglePreset = (name) => {
-    const exists = amenities.find(a => a.name === name);
+    const exists = amenities.find((amenity) => amenity.name === name);
     if (exists) {
-      setAmenities(prev => prev.filter(a => a.name !== name));
-    } else {
-      addAmenity(name);
+      setAmenities((prev) => prev.filter((amenity) => amenity.name !== name));
+      return;
     }
+    addAmenity(name);
   };
 
-  // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFieldErrors({});
     setError("");
-    setSuccess(false);
+    setCreatedPropertyId(null);
 
     if (!formData.property_municipality) {
       setError("Please select a municipality.");
       return;
     }
 
-    // Strip UI-only fields before sending
-    const { num_floors, parking_slots, year_built, ...backendData } = formData;
+    const pSize = parseFloat(formData.property_size);
+    if (isNaN(pSize) || pSize <= 0) {
+      setError("Property size must be a valid positive number.");
+      return;
+    }
 
+    const { num_floors, parking_slots, year_built, ...backendData } = formData;
     const payload = {
       ...backendData,
-      property_municipality: parseInt(formData.property_municipality),
-      property_size: parseFloat(formData.property_size),
-      building_size: parseFloat(formData.building_size) || 0,
-      price: parseFloat(formData.price) || 0,
-      num_bedrooms: parseInt(formData.num_bedrooms) || 0,
-      num_bathrooms: parseInt(formData.num_bathrooms) || 1,
+      property_municipality: parseInt(formData.property_municipality, 10),
+      property_size: pSize,
+      building_size: isLotListing ? 0 : (parseFloat(formData.building_size) || 0),
+      num_bedrooms: isLotListing ? 0 : (parseInt(formData.num_bedrooms, 10) || 0),
+      num_bathrooms: isLotListing ? 0 : (parseInt(formData.num_bathrooms, 10) || 1),
     };
 
-    // Build description with specs appended
+    if (formData.type === "RENT") {
+      const price = parseFloat(formData.price);
+      payload.price = isNaN(price) ? 0 : price;
+    } else if (formData.price !== "") {
+      const price = parseFloat(formData.price);
+      payload.price = isNaN(price) ? 0 : price;
+    }
+
     const specLines = [];
-    if (formData.category)  {
+    if (formData.category) {
       const categoryLabel =
-        PROPERTY_CATEGORIES.find((c) => c.value === formData.category)?.label || formData.category;
+        PROPERTY_CATEGORIES.find((category) => category.value === formData.category)?.label || formData.category;
       specLines.push(`Property Type: ${categoryLabel}`);
     }
-    if (num_floors)         specLines.push(`Floors: ${num_floors}`);
-    if (parking_slots)      specLines.push(`Parking Slots: ${parking_slots}`);
-    if (year_built)         specLines.push(`Year Built: ${year_built}`);
+    if (!isLotListing && num_floors) specLines.push(`Floors: ${num_floors}`);
+    if (!isLotListing && parking_slots) specLines.push(`Parking Slots: ${parking_slots}`);
+    if (!isLotListing && year_built) specLines.push(`Year Built: ${year_built}`);
     if (specLines.length) {
       payload.property_description =
-        (payload.property_description ? payload.property_description + "\n\n" : "") +
-        "--- Property Specs ---\n" + specLines.join("\n");
+        (payload.property_description ? `${payload.property_description}\n\n` : "") +
+        "--- Property Specs ---\n" +
+        specLines.join("\n");
     }
 
     try {
       const result = await createProperty(payload);
-
-      // Upload amenities via separate API calls
       const token = localStorage.getItem("access");
+
       for (const amenity of amenities) {
         if (!amenity.name.trim()) continue;
-        await fetch(`http://127.0.0.1:8000/api/properties/${result.id}/amenities/create/`, {
+        await fetch(`${API_BASE_URL}/properties/${result.id}/amenities/create/`, {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             name: amenity.name,
             amenity_type: amenity.amenity_type,
-            price: parseInt(amenity.price) || 0,
+            price: parseInt(amenity.price, 10) || 0,
           }),
         });
       }
 
-      // Upload images
       if (imageManagerRef.current) {
         await imageManagerRef.current.uploadAll(result.id);
       }
 
-      setSuccess(true);
-      setTimeout(() => navigate(`/properties/${result.id}`), 1500);
+      setCreatedPropertyId(result.id);
+      setShowSuccess(true);
     } catch (err) {
-      setError(err.message || "Failed to create listing. Please check your inputs.");
+      notify.apiError(err, "Failed to create listing. Please check your inputs.");
+      try {
+        const errorData = JSON.parse(err.message);
+        if (typeof errorData === "object" && !Array.isArray(errorData)) {
+          setFieldErrors(errorData);
+          setError("Please correct the errors highlighted below.");
+        } else {
+          setError(err.message || "Failed to create listing. Please check your inputs.");
+        }
+      } catch {
+        setError(err.message || "Failed to create listing. Please check your inputs.");
+      }
     }
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
+    setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const setField = (name, value) => setFormData(prev => ({ ...prev, [name]: value }));
+  const setField = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4">
+    <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create New Listing</h1>
-        <p className="text-gray-500">List your property with full specs so buyers know exactly what to expect.</p>
+        <h1 className="mb-2 text-3xl font-bold text-foreground">Create New Listing</h1>
+        <p className="text-muted-foreground">List your property with full specs so buyers know exactly what to expect.</p>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="mb-6 bg-red-50 border-red-200">
-          <AlertCircle className="h-5 w-5" /><AlertTitle>Error</AlertTitle>
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {success && (
-        <Alert className="mb-6 bg-green-50 border-green-200 text-green-800">
-          <CheckCircle2 className="h-5 w-5 text-green-600" /><AlertTitle className="text-green-900">Success!</AlertTitle>
-          <AlertDescription>Listing created. Redirecting to property page...</AlertDescription>
         </Alert>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-
-        {/* ── 1. Basic Info ── */}
-        <Card className="border-gray-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-            <div className="flex items-center gap-2"><Building2 className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Basic Information</CardTitle></div>
+        <Card className="overflow-hidden border-border shadow-sm">
+          <CardHeader className="border-b border-border bg-muted/40">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Basic Information</CardTitle>
+            </div>
             <CardDescription>Name, type, description and pricing.</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <CardContent className="space-y-6 p-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="property_name">Property Name *</Label>
-                <Input id="property_name" name="property_name" placeholder="e.g. Modern Condo in BGC"
-                  value={formData.property_name} onChange={handleChange} required />
+                <Input
+                  id="property_name"
+                  name="property_name"
+                  placeholder="e.g. Modern Condo in BGC"
+                  value={formData.property_name}
+                  onChange={handleChange}
+                  required
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="type">Listing Type *</Label>
-                <Select value={formData.type} onValueChange={v => setField("type", v)}>
+                <Select value={formData.type} onValueChange={(value) => setField("type", value)}>
                   <SelectTrigger id="type"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {LISTING_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    {LISTING_TYPES.map((type) => <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -220,225 +289,380 @@ export default function PropertyCreate() {
 
             <div className="space-y-2">
               <Label htmlFor="property_description">Description *</Label>
-              <Textarea id="property_description" name="property_description"
+              <Textarea
+                id="property_description"
+                name="property_description"
                 placeholder="Describe the property, its features, and what makes it special..."
-                className="min-h-[120px]" value={formData.property_description} onChange={handleChange} required />
+                className="min-h-[120px]"
+                value={formData.property_description}
+                onChange={handleChange}
+                required
+              />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="property_size" className="flex items-center gap-1.5">
-                  <Ruler className="w-3.5 h-3.5 text-gray-400" /> Size (sqm) *
+                  <Ruler className="h-3.5 w-3.5 text-muted-foreground" /> {isLotListing ? "Lot Area (sqm) *" : "Size (sqm) *"}
                 </Label>
-                <Input id="property_size" name="property_size" type="number" min="1"
-                  placeholder="e.g. 120" value={formData.property_size} onChange={handleChange} required />
+                <Input
+                  id="property_size"
+                  name="property_size"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 120"
+                  value={formData.property_size}
+                  onChange={handleChange}
+                  required
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Asking Price (₱)</Label>
-                <Input id="price" name="price" type="number" min="0"
-                  placeholder={formData.type === "RENT" ? "Required for rent listings" : "Leave blank to auto-calculate"} value={formData.price} onChange={handleChange} />
-                <p className="text-xs text-gray-400">
+                <Label htmlFor="price">Asking Price (PHP)</Label>
+                <Input
+                  id="price"
+                  name="price"
+                  type="number"
+                  min="0"
+                  placeholder={formData.type === "RENT" ? "Required for rent listings" : "Leave blank to auto-calculate"}
+                  value={formData.price}
+                  onChange={handleChange}
+                />
+                <p className="text-xs text-muted-foreground">
                   {formData.type === "RENT"
-                    ? "For Rent listings use fixed manual price."
-                    : "For Sale can be auto-calculated from municipality rate + amenities."}
+                    ? "For Rent listings use a fixed manual price."
+                    : "For Sale can be auto-calculated from municipality rate and market comparisons."}
                 </p>
               </div>
             </div>
 
-            {/* Tour availability toggle */}
-            <div className="flex items-center gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-              <input type="checkbox" id="is_available_for_tour" name="is_available_for_tour"
-                checked={formData.is_available_for_tour} onChange={handleChange}
-                className="w-4 h-4 accent-blue-800 cursor-pointer" />
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-4">
+              <input
+                type="checkbox"
+                id="is_available_for_tour"
+                name="is_available_for_tour"
+                checked={formData.is_available_for_tour}
+                onChange={handleChange}
+                className="h-4 w-4 cursor-pointer accent-primary"
+              />
               <div>
-                <Label htmlFor="is_available_for_tour" className="cursor-pointer font-semibold text-blue-900">
+                <Label htmlFor="is_available_for_tour" className="cursor-pointer font-semibold text-foreground">
                   Available for Tour
                 </Label>
-                <p className="text-xs text-blue-600 mt-0.5">Allow buyers to schedule a viewing of this property.</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Allow buyers to schedule a viewing of this property.</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* ── 2. Property Specs ── */}
-        <Card className="border-gray-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-            <div className="flex items-center gap-2"><Layers className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Property Specs</CardTitle></div>
-            <CardDescription>Rooms, floors, and property category — what buyers expect to see.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="num_bedrooms" className="flex items-center gap-1.5">
-                  <BedDouble className="w-3.5 h-3.5 text-gray-400" /> Bedrooms
-                </Label>
-                <Input id="num_bedrooms" name="num_bedrooms" type="number" min="0" max="20"
-                  value={formData.num_bedrooms} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="num_bathrooms" className="flex items-center gap-1.5">
-                  <Bath className="w-3.5 h-3.5 text-gray-400" /> Bathrooms
-                </Label>
-                <Input id="num_bathrooms" name="num_bathrooms" type="number" min="1" max="20"
-                  value={formData.num_bathrooms} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="num_floors" className="flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-gray-400" /> Floors
-                </Label>
-                <Input id="num_floors" name="num_floors" type="number" min="1"
-                  placeholder="e.g. 2" value={formData.num_floors} onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="parking_slots">Parking Slots</Label>
-                <Input id="parking_slots" name="parking_slots" type="number" min="0"
-                  placeholder="e.g. 1" value={formData.parking_slots} onChange={handleChange} />
-              </div>
+        <Card className="overflow-hidden border-border shadow-sm">
+          <CardHeader className="border-b border-border bg-muted/40">
+            <div className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Property Specs</CardTitle>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardDescription>Rooms, floors, and category details.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 p-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="category">Property Category</Label>
-                <Select value={formData.category} onValueChange={v => setField("category", v)}>
+                <Select value={formData.category} onValueChange={(value) => setField("category", value)}>
                   <SelectTrigger id="category"><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
-                    {PROPERTY_CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    {PROPERTY_CATEGORIES.map((category) => (
+                      <SelectItem key={category.value} value={category.value}>{category.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {!isLotListing && (
+                <div className="space-y-2">
+                  <Label htmlFor="year_built">Year Built</Label>
+                  <Input
+                    id="year_built"
+                    name="year_built"
+                    type="number"
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    placeholder="e.g. 2018"
+                    value={formData.year_built}
+                    onChange={handleChange}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="condition">Property Condition</Label>
+                <Select value={formData.condition} onValueChange={(value) => setField("condition", value)}>
+                  <SelectTrigger id="condition"><SelectValue placeholder="Select condition" /></SelectTrigger>
+                  <SelectContent>
+                    {PROPERTY_CONDITIONS.map((cond) => (
+                      <SelectItem key={cond.value} value={cond.value}>{cond.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="year_built">Year Built</Label>
-                <Input id="year_built" name="year_built" type="number" min="1900" max={new Date().getFullYear()}
-                  placeholder="e.g. 2018" value={formData.year_built} onChange={handleChange} />
+                <Label htmlFor="location_quality">Location Quality</Label>
+                <Select value={formData.location_quality} onValueChange={(value) => setField("location_quality", value)}>
+                  <SelectTrigger id="location_quality"><SelectValue placeholder="Select location quality" /></SelectTrigger>
+                  <SelectContent>
+                    {LOCATION_QUALITIES.map((loc) => (
+                      <SelectItem key={loc.value} value={loc.value}>{loc.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="building_size">Building Size (sqm)</Label>
-              <Input id="building_size" name="building_size" type="number" min="0"
-                placeholder="e.g. 80" value={formData.building_size} onChange={handleChange} />
-            </div>
+
+            {!isLotListing ? (
+              <>
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="num_bedrooms" className="flex items-center gap-1.5">
+                      <BedDouble className="h-3.5 w-3.5 text-muted-foreground" /> Bedrooms
+                    </Label>
+                    <Input id="num_bedrooms" name="num_bedrooms" type="number" min="0" max="20" value={formData.num_bedrooms} onChange={handleChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="num_bathrooms" className="flex items-center gap-1.5">
+                      <Bath className="h-3.5 w-3.5 text-muted-foreground" /> Bathrooms
+                    </Label>
+                    <Input id="num_bathrooms" name="num_bathrooms" type="number" min="1" max="20" value={formData.num_bathrooms} onChange={handleChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="num_floors" className="flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-muted-foreground" /> Floors
+                    </Label>
+                    <Input id="num_floors" name="num_floors" type="number" min="1" placeholder="e.g. 2" value={formData.num_floors} onChange={handleChange} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="parking_slots">Parking Slots</Label>
+                    <Input id="parking_slots" name="parking_slots" type="number" min="0" placeholder="e.g. 1" value={formData.parking_slots} onChange={handleChange} />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="building_size">Building Size (sqm)</Label>
+                  <Input id="building_size" name="building_size" type="number" min="0" placeholder="e.g. 80" value={formData.building_size} onChange={handleChange} />
+                </div>
+              </>
+            ) : (
+              <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+                Lot listings only use lot area. Building size, bedrooms, bathrooms, floors, and parking are excluded automatically.
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* ── 3. Location ── */}
-        <Card className="border-gray-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-            <div className="flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Location</CardTitle></div>
+        {/* --- CMA Valuation Preview --- */}
+        {valuation && formData.type === "SALE" && (
+          <Card className="overflow-hidden border-primary/20 bg-primary/5 shadow-md">
+            <CardHeader className="bg-primary/10 border-b border-primary/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary animate-pulse" />
+                  <CardTitle className="text-lg">AI-Powered CMA Valuation</CardTitle>
+                </div>
+                {isLoadingValuation && <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />}
+              </div>
+              <CardDescription>Comparable Market Analysis based on recent local data and property specs.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recommended Listing Price</p>
+                  <p className="text-4xl font-black text-primary tracking-tight">₱{valuation.recommended_price.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground font-semibold bg-muted inline-block px-2 py-0.5 rounded">₱{valuation.price_per_sqm.toLocaleString()} / sqm</p>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Suggested Range</p>
+                    <p className="text-xl font-bold text-foreground">
+                      ₱{valuation.suggested_range.min.toLocaleString()} — ₱{valuation.suggested_range.max.toLocaleString()}
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full sm:w-auto text-xs font-bold h-9 border-primary/40 text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setField("price", String(valuation.recommended_price));
+                    }}
+                  >
+                    Apply Recommended Price
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3 p-4 rounded-xl border border-primary/10 bg-background/50">
+                <AlertCircle className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-primary uppercase tracking-widest">Valuation Explanation</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {valuation.explanation}
+                  </p>
+                </div>
+              </div>
+
+              {valuation.comparables?.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Local Market Comparables</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {valuation.comparables.map(comp => (
+                      <div key={comp.id} className="p-3 rounded-xl border border-border bg-background shadow-sm hover:border-primary/30 transition-colors">
+                        <p className="font-bold text-xs truncate mb-1">{comp.name}</p>
+                        <p className="text-primary font-extrabold text-sm">₱{(comp.price / 1000000).toFixed(1)}M</p>
+                        <p className="text-[10px] text-muted-foreground font-medium mt-1">{comp.sqm} sqm • ₱{comp.price_per_sqm.toLocaleString()}/sqm</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="overflow-hidden border-border shadow-sm">
+          <CardHeader className="border-b border-border bg-muted/40">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Location</CardTitle>
+            </div>
             <CardDescription>Where is this property located?</CardDescription>
           </CardHeader>
-          <CardContent className="p-6 space-y-6">
+          <CardContent className="space-y-6 p-6">
             <div className="space-y-2">
               <Label htmlFor="property_municipality">Municipality *</Label>
-              <Select value={formData.property_municipality} onValueChange={v => setField("property_municipality", v)}>
+              <Select value={formData.property_municipality} onValueChange={(value) => setField("property_municipality", value)}>
                 <SelectTrigger id="property_municipality"><SelectValue placeholder="Select municipality" /></SelectTrigger>
                 <SelectContent>
-                  {municipalities.map(m => <SelectItem key={m.id} value={String(m.id)}>{m.municipality_name}</SelectItem>)}
+                  {municipalities.map((municipality) => (
+                    <SelectItem key={municipality.id} value={String(municipality.id)}>
+                      {municipality.municipality_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="property_address">Full Address *</Label>
-              <Input id="property_address" name="property_address"
+              <Input
+                id="property_address"
+                name="property_address"
                 placeholder="Street address, building name, floor/unit number..."
-                value={formData.property_address} onChange={handleChange} required />
+                value={formData.property_address}
+                onChange={handleChange}
+                required
+              />
             </div>
           </CardContent>
         </Card>
 
-        {/* ── 4. Amenities ── */}
-        {(isAgent || isOwner || isAdmin) && (
-        <Card className="border-gray-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-            <div className="flex items-center gap-2"><Sofa className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Amenities</CardTitle></div>
-            <CardDescription>Add amenities that affect the property valuation. Basic cap ₱100K, Luxury cap ₱250K.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            {/* Quick-add presets */}
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Quick Add</p>
-              <div className="flex flex-wrap gap-2">
-                {PRESET_AMENITIES.map(name => {
-                  const active = amenities.some(a => a.name === name);
-                  return (
-                    <button key={name} type="button" onClick={() => togglePreset(name)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                        active
-                          ? "bg-blue-800 text-white border-blue-800"
-                          : "bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:text-blue-800"
-                      }`}>
-                      {active ? "✓ " : "+ "}{name}
-                    </button>
-                  );
-                })}
+        {canCreate && (
+          <Card className="overflow-hidden border-border shadow-sm">
+            <CardHeader className="border-b border-border bg-muted/40">
+              <div className="flex items-center gap-2">
+                <Sofa className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Amenities</CardTitle>
               </div>
-            </div>
+              <CardDescription>Add amenities that affect valuation.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 p-6">
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick Add</p>
+                <div className="flex flex-wrap gap-2">
+                  {PRESET_AMENITIES.map((name) => {
+                    const active = amenities.some((amenity) => amenity.name === name);
+                    return (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => togglePreset(name)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-foreground hover:border-primary/40 hover:text-primary"
+                        }`}
+                      >
+                        {active ? "Selected " : "Add "}{name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-            {/* Amenity rows */}
-            {amenities.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Added Amenities</p>
-                {amenities.map((amenity, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <div className="col-span-5">
-                      <Input placeholder="Amenity name" value={amenity.name}
-                        onChange={e => updateAmenity(idx, "name", e.target.value)} className="h-9 text-sm" />
-                    </div>
-                    <div className="col-span-3">
-                      <Select value={amenity.amenity_type} onValueChange={v => updateAmenity(idx, "amenity_type", v)}>
-                        <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Basic">Basic</SelectItem>
-                          <SelectItem value="Luxury">Luxury</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-3">
-                      <Input type="number" min="0" placeholder="Price ₱"
-                        value={amenity.price} onChange={e => updateAmenity(idx, "price", e.target.value)}
-                        className="h-9 text-sm" />
-                    </div>
-                    <div className="col-span-1 flex justify-center">
-                      {isAdmin && (
-                        <button type="button" onClick={() => removeAmenity(idx)}
-                          className="text-red-400 hover:text-red-600 transition-colors">
-                          <Trash2 className="w-4 h-4" />
+              {amenities.length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Added Amenities</p>
+                  {amenities.map((amenity, idx) => (
+                    <div key={idx} className="grid grid-cols-12 items-center gap-3 rounded-xl border border-border bg-muted/30 p-3">
+                      <div className="col-span-5">
+                        <Input placeholder="Amenity name" value={amenity.name} onChange={(e) => updateAmenity(idx, "name", e.target.value)} className="h-9 text-sm" />
+                      </div>
+                      <div className="col-span-3">
+                        <Select value={amenity.amenity_type} onValueChange={(value) => updateAmenity(idx, "amenity_type", value)}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Basic">Basic</SelectItem>
+                            <SelectItem value="Luxury">Luxury</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-3">
+                        <Input type="number" min="0" placeholder="Price PHP" value={amenity.price} onChange={(e) => updateAmenity(idx, "price", e.target.value)} className="h-9 text-sm" />
+                      </div>
+                      <div className="col-span-1 flex justify-center">
+                        <button type="button" onClick={() => removeAmenity(idx)} className="text-destructive transition-colors hover:opacity-80">
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            <Button type="button" variant="outline" size="sm" onClick={() => addAmenity()}
-              className="gap-2 border-blue-200 text-blue-800 hover:bg-blue-50">
-              <Plus className="w-4 h-4" /> Add Custom Amenity
-            </Button>
-          </CardContent>
-        </Card>
+              <Button type="button" variant="outline" size="sm" onClick={() => addAmenity()} className="gap-2">
+                <Plus className="h-4 w-4" /> Add Custom Amenity
+              </Button>
+            </CardContent>
+          </Card>
         )}
 
-        {/* ── 5. Photos ── */}
-        {(isAgent || isOwner || isAdmin) && (
-        <Card className="border-gray-200 shadow-sm overflow-hidden">
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-            <div className="flex items-center gap-2"><ImagePlus className="w-5 h-5 text-blue-800" /><CardTitle className="text-lg">Property Photos</CardTitle></div>
-            <CardDescription>Add photos to attract more buyers. The first image will be the primary photo.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <PropertyImageManager ref={imageManagerRef} mode="preview" />
-          </CardContent>
-        </Card>
+        {canCreate && (
+          <Card className="overflow-hidden border-border shadow-sm">
+            <CardHeader className="border-b border-border bg-muted/40">
+              <div className="flex items-center gap-2">
+                <ImagePlus className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Property Photos</CardTitle>
+              </div>
+              <CardDescription>Add photos to attract more buyers. The first image will be the primary photo.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <PropertyImageManager ref={imageManagerRef} mode="preview" canManage={canCreate} />
+            </CardContent>
+          </Card>
         )}
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => navigate(-1)} className="h-12 px-8">Cancel</Button>
-          <Button type="submit" disabled={isPending || !(isAgent || isOwner || isAdmin)}
-            className="h-12 px-12 bg-blue-800 hover:bg-blue-900 text-white font-bold text-lg rounded-xl shadow-lg transition-all active:scale-95">
+          <Button type="submit" disabled={isPending || !canCreate} className="h-12 rounded-xl px-12 text-lg font-bold shadow-lg">
             {isPending ? "Creating..." : "Create Listing"}
           </Button>
         </div>
       </form>
+
+      <SuccessModal
+        open={!!createdPropertyId}
+        title="Listing Created Successfully!"
+        description="Your property listing has been created and is now live. You can view it, add more photos, or continue managing your listings."
+        confirmLabel="View Listing"
+        onConfirm={() => navigate(`/properties/${createdPropertyId}`)}
+        onOpenChange={(open) => { if (!open) setCreatedPropertyId(null); }}
+      />
     </div>
   );
 }

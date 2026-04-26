@@ -1,9 +1,9 @@
 import React, { useRef, useState } from "react";
-import { useUploadPropertyImages, useDeletePropertyImage } from "@/services/api/useProperties";
+import { useUploadPropertyImages, useDeletePropertyImage } from "@/hooks/api/properties/UseProperties";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, Trash2, Star, Upload, X } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notifications";
 
 /**
  * PropertyImageManager
@@ -22,11 +22,11 @@ import { toast } from "sonner";
  *  ref           forwarded ref exposing { uploadAll(propertyId) } for mode="preview"
  */
 const PropertyImageManager = React.forwardRef(function PropertyImageManager(
-  { mode = "preview", propertyId, existingImages = [], onFilesChange },
+  { mode = "preview", propertyId, existingImages = [], onFilesChange, canManage = true },
   ref
 ) {
   const { isAdmin, isAgent, isOwner } = useAuth();
-  const canManageImages = isAdmin || isAgent || isOwner;
+  const canManageImages = canManage && (isAdmin || isAgent || isOwner);
   const fileInputRef = useRef(null);
   const [localFiles, setLocalFiles] = useState([]); // { file, previewUrl }
   const [uploading, setUploading] = useState(false);
@@ -44,10 +44,10 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
           propertyId: pid,
           images: localFiles.map(f => f.file),
         });
-        toast.success(`${localFiles.length} image(s) uploaded.`);
+        notify.success(`${localFiles.length} image(s) uploaded.`);
         setLocalFiles([]);
       } catch {
-        toast.error("Some images failed to upload.");
+        notify.error("Some images failed to upload.");
       } finally {
         setUploading(false);
       }
@@ -60,8 +60,8 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
     if (!picked.length) return;
 
     const valid = picked.filter(f => {
-      if (f.size > 10 * 1024 * 1024) { toast.error(`${f.name} exceeds 10 MB.`); return false; }
-      if (!f.type.startsWith("image/")) { toast.error(`${f.name} is not an image.`); return false; }
+      if (f.size > 10 * 1024 * 1024) { notify.error(`${f.name} exceeds 10 MB.`); return false; }
+      if (!f.type.startsWith("image/")) { notify.error(`${f.name} is not an image.`); return false; }
       return true;
     });
 
@@ -76,8 +76,8 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
       uploadMutation.mutate(
         { propertyId, images: valid },
         {
-          onSuccess: () => toast.success(`${valid.length} image(s) uploaded.`),
-          onError: () => toast.error("Upload failed."),
+          onSuccess: () => notify.success(`${valid.length} image(s) uploaded.`),
+          onError: () => notify.error("Upload failed."),
           onSettled: () => setUploading(false),
         }
       );
@@ -97,11 +97,11 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
 
   // ── Delete existing image (mode="manage") ────────────────────────────────
   const deleteExisting = (imageId, imageName) => {
-    if (!isAdmin) return;
+    if (!canManageImages) return;
     if (!confirm(`Delete this image?`)) return;
     deleteMutation.mutate(imageId, {
-      onSuccess: () => toast.success("Image deleted."),
-      onError: () => toast.error("Failed to delete image."),
+      onSuccess: () => notify.success("Image deleted."),
+      onError: () => notify.error("Failed to delete image."),
     });
   };
 
@@ -113,7 +113,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
       {mode === "manage" && existingImages.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {existingImages.map((img, idx) => (
-            <div key={img.id} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-video">
+            <div key={img.id} className="relative group rounded-xl overflow-hidden border border-border bg-muted/30 aspect-video">
               <img src={img.image} alt={`Property image ${idx + 1}`} className="w-full h-full object-cover" />
               {img.is_primary && (
                 <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -139,7 +139,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
       {mode === "preview" && localFiles.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {localFiles.map((entry, idx) => (
-            <div key={idx} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50 aspect-video">
+            <div key={idx} className="relative group rounded-xl overflow-hidden border border-border bg-muted/30 aspect-video">
               <img src={entry.previewUrl} alt={`Preview ${idx + 1}`} className="w-full h-full object-cover" />
               {idx === 0 && (
                 <div className="absolute top-2 left-2 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
@@ -160,7 +160,7 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
 
       {/* ── Empty state ── */}
       {mode === "manage" && existingImages.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 text-gray-400">
+        <div className="flex flex-col items-center justify-center py-10 border-2 border-dashed border-border rounded-xl bg-muted/30 text-muted-foreground">
           <ImagePlus className="w-10 h-10 mb-2" />
           <p className="text-sm font-medium">No images yet</p>
           <p className="text-xs">Upload photos to showcase your property</p>
@@ -187,16 +187,16 @@ const PropertyImageManager = React.forwardRef(function PropertyImageManager(
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={isWorking}
-            className="gap-2 border-blue-200 text-blue-800 hover:bg-blue-50"
+            className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
           >
             {isWorking ? (
-              <><div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" /> Uploading...</>
+              <><div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> Uploading...</>
             ) : (
               <><Upload className="w-4 h-4" /> {mode === "preview" ? "Add Photos" : "Upload More"}</>
             )}
           </Button>
           {mode === "preview" && localFiles.length > 0 && (
-            <p className="text-xs text-gray-500">{localFiles.length} photo{localFiles.length !== 1 ? "s" : ""} selected · will upload after saving</p>
+            <p className="text-xs text-muted-foreground">{localFiles.length} photo{localFiles.length !== 1 ? "s" : ""} selected · will upload after saving</p>
           )}
         </div>
       )}

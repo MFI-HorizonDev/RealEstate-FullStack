@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useProperties } from "../services/api/useProperties";
-import { isUserLoggedIn } from "../services/api/useAuth";
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
+import { isUserLoggedIn } from "@/hooks/api/authentication/useAuth";
 
 export default function TestPagination() {
   const [page, setPage] = useState(1);

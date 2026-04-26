@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate } from "react-router";
-import { isUserLoggedIn, hasRole, hasAnyRole, isSuperAdmin } from "@/services/api/useAuth";
-import { useAuth } from "@/services/api/useAuth";
+import { isUserLoggedIn, hasRole, hasAnyRole, isSuperAdmin } from "@/hooks/api/authentication/useAuth";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 
 /**
  * Higher-Order Component (HOC) to protect routes with permission-based access control.
@@ -18,7 +18,7 @@ const withAuth = (WrappedComponent, requiredRoles = null, requireSuperAdmin = fa
 
     // Show loading state while fetching user data
     if (isLoggedIn && isLoading) {
-      return <div className="flex items-center justify-center h-screen">Loading...</div>;
+      return <div className="flex items-center justify-center min-h-[100dvh]">Loading...</div>;
     }
 
     // Redirect to login if the user is not authenticated
@@ -49,4 +49,3 @@ const withAuth = (WrappedComponent, requiredRoles = null, requireSuperAdmin = fa
 };
 
 export default withAuth;
-

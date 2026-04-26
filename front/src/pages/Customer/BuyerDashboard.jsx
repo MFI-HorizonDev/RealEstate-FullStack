@@ -1,8 +1,8 @@
 import React from "react";
 import { Link } from "react-router";
-import { useTours } from "@/services/api/useTours";
-import { useSales } from "@/services/api/useSales";
-import { useAuth } from "@/services/api/useAuth";
+import { useTours } from "@/hooks/api/tours/useTours";
+import { useSales } from "@/hooks/api/sales/useSales";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

@@ -8,11 +8,12 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useProperties } from "@/services/api/useProperties";
-import { useTours } from "@/services/api/useTours";
-import { useMunicipalities } from "@/services/api/useMunicipalities";
-import { useSales } from "@/services/api/useSales";
-import { useAuth } from "@/services/api/useAuth";
+import wowImage from "@/assets/wow.jpg";
+import { useProperties } from "@/hooks/api/properties/UseGetProperties";
+import { useTours } from "@/hooks/api/tours/useTours";
+import { useMunicipalities } from "@/hooks/api/municipalities/UseGetMunicipalities";
+import { useSales } from "@/hooks/api/sales/useSales";
+import { useAuth } from "@/hooks/api/authentication/useAuth";
 
 
 const Home = () => {
@@ -55,19 +56,19 @@ const Home = () => {
   return (
     <div>
       {/* Hero Section */}
-      <div className="relative h-screen w-full overflow-hidden -mt-28">
+      <div className="relative min-h-[100dvh] w-full overflow-hidden pt-0">
         <img
-          src="/src/assets/wow.jpg"
-          className="w-full h-full object-cover"
-          alt="featured"
+          src={wowImage}
+          className="absolute inset-0 w-full h-full object-cover"
+          alt="Aerial view of premium residential properties and modern homes"
         />
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-10">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 text-white [text-shadow:_0_0_10px_rgba(0,0,0,0.9),_0_0_20px_rgba(0,0,0,0.7),_0_0_30px_rgba(0,0,0,0.5)]">
-            Real Estate ng Horizon Dev
+            Find Your Dream Property
           </h2>
           <p className="text-lg md:text-xl lg:text-2xl max-w-3xl mb-8 text-white [text-shadow:_0_0_8px_rgba(0,0,0,0.9),_0_0_16px_rgba(0,0,0,0.7),_0_0_24px_rgba(0,0,0,0.5)]">
-            dito description sa susunod nalang lagyan boss
+            Discover premium properties tailored to your lifestyle. Browse verified listings, schedule tours, and connect with trusted agents — all in one place.
           </p>
           <div className="w-full max-w-4xl bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-8">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -127,21 +128,21 @@ const Home = () => {
           <House className="h-20 w-20 mx-auto mb-4 text-blue-800" />
           <h3 className="text-xl font-semibold mb-3">Hundreds of Listings</h3>
           <p className="text-gray-700 text-sm md:text-base">
-            dito description sa susunod nalang lagyan boss
+            Browse through verified property listings with detailed information, high-quality photos, and transparent pricing.
           </p>
         </div>
         <div className="text-center p-6 md:p-8 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition">
           <KeyRound className="h-20 w-20 mx-auto mb-4 text-amber-900" />
           <h3 className="text-xl font-semibold mb-3">Relocation Support</h3>
           <p className="text-gray-700 text-sm md:text-base">
-            dito description sa susunod nalang lagyan boss
+            Get end-to-end assistance from property search to moving day. Our platform connects you with trusted professionals every step of the way.
           </p>
         </div>
         <div className="text-center p-6 md:p-8 bg-white/60 backdrop-blur-sm rounded-xl border border-gray-200 shadow-sm hover:shadow-lg transition">
           <Search className="h-20 w-20 mx-auto mb-4 text-blue-800" />
-          <h3 className="text-xl font-semibold mb-3">Dedicated Conciergess</h3>
+          <h3 className="text-xl font-semibold mb-3">Dedicated Concierge</h3>
           <p className="text-gray-700 text-sm md:text-base">
-            dito description sa susunod nalang lagyan boss
+            Our agents and specialists are ready to assist you with personalized property recommendations, tour scheduling, and expert market insights.
           </p>
         </div>
       </div>

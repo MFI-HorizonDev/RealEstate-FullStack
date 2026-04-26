@@ -3,42 +3,66 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, CircleCheckBig } from "lucide-react";
+import { API_BASE_URL, BASE_URL } from "@/hooks/api/config";
 
 export default function AuthDebug() {
   const [testStatus, setTestStatus] = useState(null);
   const [loginStatus, setLoginStatus] = useState(null);
   const [signupStatus, setSignupStatus] = useState(null);
-  const [error, setError] = useState("");
+  const [healthMessage, setHealthMessage] = useState("");
+  const [loginMessage, setLoginMessage] = useState("");
+  const [signupMessage, setSignupMessage] = useState("");
 
   const testBackend = async () => {
     try {
-      setError("");
+      setHealthMessage("");
       setTestStatus("loading");
-      const response = await fetch("http://127.0.0.1:8000/api/health/");
-      const data = await response.json();
-      console.log("Health check response:", data);
+      const response = await fetch(`${API_BASE_URL}/health/?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+        },
+      });
+      const raw = await response.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        data = null;
+      }
+      console.log("Health check response:", { status: response.status, data, raw });
       
       if (response.ok) {
         setTestStatus("success");
+        setHealthMessage(
+          data?.message
+            ? String(data.message)
+            : `OK (HTTP ${response.status})`
+        );
       } else {
         setTestStatus("error");
-        setError(JSON.stringify(data));
+        setHealthMessage(
+          data
+            ? JSON.stringify(data)
+            : `HTTP ${response.status}: ${raw?.slice?.(0, 300) || "No response body"}`
+        );
       }
     } catch (err) {
       console.error("Health check error:", err);
       setTestStatus("error");
-      setError(err.message);
+      setHealthMessage(err.message || "Failed to fetch");
     }
   };
 
   const testLogin = async () => {
     try {
-      setError("");
+      setLoginMessage("");
       setLoginStatus("loading");
-      const response = await fetch("http://127.0.0.1:8000/api/token/", {
+      const response = await fetch(`${API_BASE_URL}/token/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({
           username: "superadmin@realestate.com",
@@ -52,26 +76,27 @@ export default function AuthDebug() {
         setLoginStatus("success");
         localStorage.setItem("access", data.access);
         localStorage.setItem("refresh", data.refresh);
-        setError(`Success! Access Token: ${data.access.substring(0, 20)}...`);
+        setLoginMessage(`Success! Access Token: ${data.access.substring(0, 20)}...`);
       } else {
         setLoginStatus("error");
-        setError(JSON.stringify(data));
+        setLoginMessage(JSON.stringify(data));
       }
     } catch (err) {
       console.error("Login error:", err);
       setLoginStatus("error");
-      setError(err.message);
+      setLoginMessage(err.message || "Failed to fetch");
     }
   };
 
   const testSignup = async () => {
     try {
-      setError("");
+      setSignupMessage("");
       setSignupStatus("loading");
-      const response = await fetch("http://127.0.0.1:8000/api/register/", {
+      const response = await fetch(`${API_BASE_URL}/register/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true",
         },
         body: JSON.stringify({
           username: `testuser_${Date.now()}`,
@@ -88,19 +113,19 @@ export default function AuthDebug() {
       
       if (response.ok) {
         setSignupStatus("success");
-        setError(`Success! User created: ${data.user.username}`);
+        setSignupMessage(`Success! User created: ${data.user.username}`);
         if (data.access) {
           localStorage.setItem("access", data.access);
           localStorage.setItem("refresh", data.refresh);
         }
       } else {
         setSignupStatus("error");
-        setError(JSON.stringify(data));
+        setSignupMessage(JSON.stringify(data));
       }
     } catch (err) {
       console.error("Signup error:", err);
       setSignupStatus("error");
-      setError(err.message);
+      setSignupMessage(err.message || "Failed to fetch");
     }
   };
 
@@ -116,7 +141,7 @@ export default function AuthDebug() {
             <div>
               <h3 className="text-lg font-semibold mb-2">1. Backend Health Check</h3>
               <p className="text-sm text-gray-600 mb-4">
-                Test if backend server is running at http://127.0.0.1:8000
+                Test if backend server is running at {BASE_URL}
               </p>
               <Button onClick={testBackend} className="w-full">
                 {testStatus === "loading" ? "Testing..." : "Test Backend"}
@@ -134,7 +159,7 @@ export default function AuthDebug() {
                 <Alert className="mt-4 bg-red-50 border-red-200 text-red-800">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Backend Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{healthMessage}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -152,14 +177,14 @@ export default function AuthDebug() {
                 <Alert className="mt-4 bg-green-50 border-green-200 text-green-800">
                   <CircleCheckBig className="h-4 w-4" />
                   <AlertTitle>Login Successful!</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{loginMessage}</AlertDescription>
                 </Alert>
               )}
               {loginStatus === "error" && (
                 <Alert className="mt-4 bg-red-50 border-red-200 text-red-800">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Login Failed</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{loginMessage}</AlertDescription>
                 </Alert>
               )}
             </div>
@@ -177,14 +202,14 @@ export default function AuthDebug() {
                 <Alert className="mt-4 bg-green-50 border-green-200 text-green-800">
                   <CircleCheckBig className="h-4 w-4" />
                   <AlertTitle>Signup Successful!</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{signupMessage}</AlertDescription>
                 </Alert>
               )}
               {signupStatus === "error" && (
                 <Alert className="mt-4 bg-red-50 border-red-200 text-red-800">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Signup Failed</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription>{signupMessage}</AlertDescription>
                 </Alert>
               )}
             </div>

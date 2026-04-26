@@ -18,6 +18,9 @@ import Places from "../pages/Places";
 import Tours from "../pages/Tours";
 import Bookings from "../pages/Bookings";
 import TestPagination from "../pages/TestPagination";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
+import TermsOfService from "../pages/TermsOfService";
+import AboutUs from "../pages/about-us";
 
 // Properties (shared)
 import AllProperties from "../pages/Owner/Properties/all-properties";
@@ -140,6 +143,10 @@ export let routes = createBrowserRouter([
 
   // ── Dashboard: Buyer ─────────────────────────────────────────────────────────
   { path: "buyer/dashboard", element: dash(<BuyerDashboard />, "Buyer") },
+
+  { path: "privacy", element: <PublicLayout><PrivacyPolicy /></PublicLayout> },
+  { path: "terms",   element: <PublicLayout><TermsOfService /></PublicLayout> },
+  { path: "about",   element: <PublicLayout><AboutUs /></PublicLayout> },
 
   // ── Misc ─────────────────────────────────────────────────────────────────────
   { path: "test-pagination", element: dash(<TestPagination />) },

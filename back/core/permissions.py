@@ -117,3 +117,73 @@ class IsOwnerOrAgentOrReadOnly(permissions.BasePermission):
                 (hasattr(obj, 'agent') and obj.agent == request.user)
             )
         return False
+
+
+class IsOwnerOrAgentOrAdminGroup(permissions.BasePermission):
+    """
+    Object-level permission: allows the property owner, the assigned agent,
+    or any Admin/SuperAdmin to perform write operations (edit, delete).
+    All authenticated users can read (safe methods).
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_superuser:
+            return True
+        if request.user.groups.filter(name__in=['Admin', 'SuperAdmin', 'Super Admin']).exists():
+            return True
+        if hasattr(obj, 'owner') and obj.owner == request.user:
+            return True
+        if hasattr(obj, 'agent') and obj.agent == request.user:
+            return True
+        return False
+
+
+class IsPropertyOwnerOrSuperAdmin(permissions.BasePermission):
+    """
+    Write access is limited to the listing owner.
+    Superusers and SuperAdmin members keep override access for system recovery.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+            
+        if request.user.is_superuser:
+            return True
+
+        if request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists():
+            return True
+
+        # Check for property_id in URL kwargs (for Create views)
+        property_id = view.kwargs.get('property_id')
+        if property_id:
+            from listings.models import Property
+            try:
+                property_obj = Property.objects.get(pk=property_id)
+                return property_obj.owner == request.user
+            except Property.DoesNotExist:
+                return False
+
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        if request.user.groups.filter(name__in=['SuperAdmin', 'Super Admin']).exists():
+            return True
+
+        owner = getattr(obj, 'owner', None)
+        if owner is not None:
+            return owner == request.user
+
+        property_obj = getattr(obj, 'property', None)
+        if property_obj is not None:
+            return getattr(property_obj, 'owner', None) == request.user
+
+        return False
