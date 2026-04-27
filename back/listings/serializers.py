@@ -28,8 +28,8 @@ class AmenitySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def validate(self, data):
-        amenity_type = data.get('amenity_type')
-        price = data.get('price', 0)
+        amenity_type = data.get('amenity_type', getattr(self.instance, 'amenity_type', None))
+        price = data.get('price', getattr(self.instance, 'price', 0))
 
         if amenity_type == "Basic" and price > 100000:
             raise serializers.ValidationError("Basic amenity price cannot exceed ₱100,000.")
@@ -155,9 +155,23 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A property cannot have more than 20 images.")
         return value
 
+    def to_internal_value(self, data):
+        mutable_data = data.copy()
+        listing_type = mutable_data.get("type", getattr(self.instance, "type", None))
+        incoming_price = mutable_data.get("price", serializers.empty)
+
+        # Allow blank asking price only for SALE so backend can auto-calculate.
+        if incoming_price == "":
+            if listing_type == "SALE":
+                mutable_data.pop("price", None)
+            else:
+                mutable_data["price"] = None
+
+        return super().to_internal_value(mutable_data)
+
     def validate(self, data):
-        listing_type = data.get("type")
-        price = data.get("price")
+        listing_type = data.get("type", getattr(self.instance, "type", None))
+        price = data.get("price", getattr(self.instance, "price", None))
         category = data.get("category", getattr(self.instance, "category", "HOUSE_AND_LOT"))
 
         property_size = data.get("property_size", getattr(self.instance, "property_size", None))
@@ -196,6 +210,10 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         amenities_data = validated_data.pop('amenities', [])
         images_data = validated_data.pop('images', [])
+        should_autocalculate_sale_price = (
+            validated_data.get("type") == "SALE"
+            and (validated_data.get("price") is None or float(validated_data.get("price") or 0) <= 0)
+        )
 
         if validated_data.get("category") == "LOT":
             validated_data["building_size"] = 0
@@ -207,6 +225,12 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
         for amenity_data in amenities_data:
             Amenity.objects.create(property=property_obj, **amenity_data)
 
+        if should_autocalculate_sale_price:
+            from .pricing import PricingEngine
+            valuation = PricingEngine().calculate_valuation(property_obj)
+            property_obj.price = valuation.get("recommended_price") or 0
+            property_obj.save(update_fields=["price"])
+
         for image_data in images_data:
             PropertyImage.objects.create(property=property_obj, **image_data)
 
@@ -217,7 +241,21 @@ class PropertyCreateSerializer(serializers.ModelSerializer):
             validated_data["building_size"] = 0
             validated_data["num_bedrooms"] = 0
             validated_data["num_bathrooms"] = 0
-        return super().update(instance, validated_data)
+
+        updated = super().update(instance, validated_data)
+
+        listing_type = validated_data.get("type", updated.type)
+        incoming_price = validated_data.get("price", updated.price)
+        should_autocalculate_sale_price = (
+            listing_type == "SALE" and (incoming_price is None or float(incoming_price or 0) <= 0)
+        )
+        if should_autocalculate_sale_price:
+            from .pricing import PricingEngine
+            valuation = PricingEngine().calculate_valuation(updated)
+            updated.price = valuation.get("recommended_price") or 0
+            updated.save(update_fields=["price"])
+
+        return updated
     
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])

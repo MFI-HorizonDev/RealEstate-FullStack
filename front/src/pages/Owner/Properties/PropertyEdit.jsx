@@ -129,8 +129,13 @@ export default function PropertyEdit() {
       return;
     }
 
+    if (formData.type === "RENT" && (formData.price === "" || Number(formData.price) <= 0)) {
+      setError("For Rent listings require a monthly price greater than 0.");
+      return;
+    }
+
     try {
-      await updateProperty({
+      const updatePayload = {
         ...formData,
         property_municipality: parseInt(formData.property_municipality, 10),
         property_size: parseFloat(formData.property_size),
@@ -142,7 +147,8 @@ export default function PropertyEdit() {
           : formData.price !== ""
             ? { price: parseFloat(formData.price) || 0 }
             : {}),
-      });
+      };
+      await updateProperty(updatePayload);
 
       setSuccess(true);
     } catch (err) {
@@ -237,7 +243,15 @@ export default function PropertyEdit() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Asking Price (PHP)</Label>
-                <Input id="price" name="price" type="number" min="0" value={formData.price} onChange={handleChange} />
+                <Input
+                  id="price"
+                  name="price"
+                  type="number"
+                  min="0"
+                  required={formData.type === "RENT"}
+                  value={formData.price}
+                  onChange={handleChange}
+                />
               </div>
             </div>
 

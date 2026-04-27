@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 
 class Municipality(models.Model):
@@ -149,11 +150,14 @@ class Amenity(models.Model):
     class Meta:
         verbose_name_plural = "Amenities"
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         if self.amenity_type == "Basic" and self.price > 100000:
-            self.price = 100000
-        elif self.amenity_type == "Luxury" and self.price > 250000:
-            self.price = 250000
+            raise ValidationError({"price": "Basic amenity price cannot exceed ₱100,000."})
+        if self.amenity_type == "Luxury" and self.price > 250000:
+            raise ValidationError({"price": "Luxury amenity price cannot exceed ₱250,000."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
         super().save(*args, **kwargs)
 
     def __str__(self):
