@@ -355,10 +355,15 @@ class Command(BaseCommand):
 
             # Create Amenities (skip LOT listings)
             if category != 'LOT':
+                # Business rule: Condo units are part of a managed building,
+                # so they don't own an Elevator — the building does.
+                amenity_pool = ['Pool', 'Garden', 'Garage', 'Gym', 'Security', 'Elevator']
+                if category == 'CONDO':
+                    amenity_pool = [a for a in amenity_pool if a != 'Elevator']
                 for j in range(random.randint(0, 3)):
                     Amenity.objects.create(
                         property=property_obj,
-                        name=random.choice(['Pool', 'Garden', 'Garage', 'Gym', 'Security', 'Elevator']),
+                        name=random.choice(amenity_pool),
                         amenity_type=random.choice(['Basic', 'Luxury']),
                         price=random.randint(50000, 300000),
                         added_by=random.choice(all_users) if all_users else None

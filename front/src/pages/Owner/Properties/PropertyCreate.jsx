@@ -117,7 +117,15 @@ export default function PropertyCreate() {
   const [createdPropertyId, setCreatedPropertyId] = useState(null);
 
   const isLotListing = formData.category === "LOT";
+  const isApartmentOrCondo = formData.category === "APARTMENT" || formData.category === "CONDO";
+  const isCondo = formData.category === "CONDO";
   const canCreate = isAgent || isOwner || isAdmin;
+
+  // Amenity presets filtered by category rules
+  const visiblePresetAmenities = PRESET_AMENITIES.filter((name) => {
+    if (isCondo && name === "Elevator") return false;
+    return true;
+  });
 
   const addAmenity = (name = "") => {
     setAmenities((prev) => [...prev, { ...emptyAmenity(), name }]);
@@ -181,7 +189,7 @@ export default function PropertyCreate() {
         PROPERTY_CATEGORIES.find((category) => category.value === formData.category)?.label || formData.category;
       specLines.push(`Property Type: ${categoryLabel}`);
     }
-    if (!isLotListing && num_floors) specLines.push(`Floors: ${num_floors}`);
+    if (!isLotListing && !isApartmentOrCondo && num_floors) specLines.push(`Floors: ${num_floors}`);
     if (!isLotListing && parking_slots) specLines.push(`Parking Slots: ${parking_slots}`);
     if (!isLotListing && year_built) specLines.push(`Year Built: ${year_built}`);
     if (specLines.length) {
@@ -238,7 +246,20 @@ export default function PropertyCreate() {
     setFormData((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const setField = (name, value) => setFormData((prev) => ({ ...prev, [name]: value }));
+  const setField = (name, value) => {
+    setFormData((prev) => {
+      const updated = { ...prev, [name]: value };
+      // When switching to APARTMENT or CONDO, clear num_floors
+      if (name === "category" && (value === "APARTMENT" || value === "CONDO")) {
+        updated.num_floors = "";
+      }
+      return updated;
+    });
+    // When switching to CONDO, remove Elevator from amenities
+    if (name === "category" && value === "CONDO") {
+      setAmenities((prev) => prev.filter((a) => a.name !== "Elevator"));
+    }
+  };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
@@ -420,7 +441,7 @@ export default function PropertyCreate() {
 
             {!isLotListing ? (
               <>
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className={`grid grid-cols-2 gap-4 ${isApartmentOrCondo ? "md:grid-cols-3" : "md:grid-cols-4"}`}>
                   <div className="space-y-2">
                     <Label htmlFor="num_bedrooms" className="flex items-center gap-1.5">
                       <BedDouble className="h-3.5 w-3.5 text-muted-foreground" /> Bedrooms
@@ -433,12 +454,14 @@ export default function PropertyCreate() {
                     </Label>
                     <Input id="num_bathrooms" name="num_bathrooms" type="number" min="1" max="20" value={formData.num_bathrooms} onChange={handleChange} />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="num_floors" className="flex items-center gap-1.5">
-                      <Layers className="h-3.5 w-3.5 text-muted-foreground" /> Floors
-                    </Label>
-                    <Input id="num_floors" name="num_floors" type="number" min="1" placeholder="e.g. 2" value={formData.num_floors} onChange={handleChange} />
-                  </div>
+                  {!isApartmentOrCondo && (
+                    <div className="space-y-2">
+                      <Label htmlFor="num_floors" className="flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-muted-foreground" /> Floors
+                      </Label>
+                      <Input id="num_floors" name="num_floors" type="number" min="1" placeholder="e.g. 2" value={formData.num_floors} onChange={handleChange} />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="parking_slots">Parking Slots</Label>
                     <Input id="parking_slots" name="parking_slots" type="number" min="0" placeholder="e.g. 1" value={formData.parking_slots} onChange={handleChange} />
@@ -517,7 +540,7 @@ export default function PropertyCreate() {
               <div>
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick Add</p>
                 <div className="flex flex-wrap gap-2">
-                  {PRESET_AMENITIES.map((name) => {
+                  {visiblePresetAmenities.map((name) => {
                     const active = amenities.some((amenity) => amenity.name === name);
                     return (
                       <button

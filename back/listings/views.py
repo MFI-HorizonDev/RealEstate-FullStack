@@ -297,6 +297,13 @@ class AmenityCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         if 'property_id' in self.kwargs:
             property_instance = Property.objects.get(pk=self.kwargs['property_id'])
+            # Business rule: Condo units don't own an Elevator — the building does.
+            if (
+                property_instance.category == 'CONDO'
+                and serializer.validated_data.get('name', '').strip().lower() == 'elevator'
+            ):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"name": "Condo listings cannot have an 'Elevator' amenity."})
             serializer.save(property=property_instance, added_by=self.request.user)
         else:
             serializer.save(added_by=self.request.user)
