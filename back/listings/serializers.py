@@ -276,6 +276,9 @@ class RegisterSerializer(serializers.ModelSerializer):
         role = validated_data.pop('role')
         password = validated_data.pop('password')
         user = User.objects.create_user(password=password, **validated_data)
+        if role == "Buyer":
+            buyer_group, _ = Group.objects.get_or_create(name="Buyer")
+            user.groups.add(buyer_group)
         profile, _ = UserProfile.objects.get_or_create(user=user)
         profile.requested_role = role
         profile.role_request_status = "PENDING"
