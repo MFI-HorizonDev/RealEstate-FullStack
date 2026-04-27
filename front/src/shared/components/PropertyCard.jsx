@@ -39,9 +39,8 @@ export const PropertyCard = ({ property, onFavorite, isFavorited }) => {
           className="w-full h-full object-cover hover:scale-105 transition-transform"
         />
         <Badge
-          className={`absolute top-3 right-3 ${
-            statusColors[property.status] || statusColors.ACTIVE
-          }`}
+          className={`absolute top-3 right-3 ${statusColors[property.status] || statusColors.ACTIVE
+            }`}
         >
           {property.status}
         </Badge>
