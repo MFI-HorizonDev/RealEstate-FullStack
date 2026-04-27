@@ -165,6 +165,11 @@ export default function PropertyCreate() {
       return;
     }
 
+    if (formData.type === "RENT" && (formData.price === "" || Number(formData.price) <= 0)) {
+      setError("For Rent listings require a monthly price greater than 0.");
+      return;
+    }
+
     const { num_floors, parking_slots, year_built, ...backendData } = formData;
     const payload = {
       ...backendData,
@@ -345,6 +350,7 @@ export default function PropertyCreate() {
                   name="price"
                   type="number"
                   min="0"
+                  required={formData.type === "RENT"}
                   placeholder={formData.type === "RENT" ? "Required for rent listings" : "Leave blank to auto-calculate"}
                   value={formData.price}
                   onChange={handleChange}
@@ -578,7 +584,18 @@ export default function PropertyCreate() {
                         </Select>
                       </div>
                       <div className="col-span-3">
-                        <Input type="number" min="0" placeholder="Price PHP" value={amenity.price} onChange={(e) => updateAmenity(idx, "price", e.target.value)} className="h-9 text-sm" />
+                        <Input
+                          type="number"
+                          min="0"
+                          max={amenity.amenity_type === "Luxury" ? 250000 : 100000}
+                          placeholder="Price PHP"
+                          value={amenity.price}
+                          onChange={(e) => updateAmenity(idx, "price", e.target.value)}
+                          className="h-9 text-sm"
+                        />
+                        <p className="mt-1 text-[10px] text-muted-foreground">
+                          Max {amenity.amenity_type === "Luxury" ? "Luxury: PHP 250,000" : "Basic: PHP 100,000"}
+                        </p>
                       </div>
                       <div className="col-span-1 flex justify-center">
                         <button type="button" onClick={() => removeAmenity(idx)} className="text-destructive transition-colors hover:opacity-80">
