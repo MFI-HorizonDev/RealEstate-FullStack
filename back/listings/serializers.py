@@ -261,10 +261,17 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=[('Buyer', 'Buyer'), ('Agent', 'Agent'), ('Owner', 'Owner')], write_only=True)
+    email = serializers.EmailField(required=True)
 
     class Meta:
         model = User
         fields = ('username', 'email', 'password', 'password_confirm', 'first_name', 'last_name', 'role')
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+    
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password_confirm']:
@@ -303,6 +310,15 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = ['email']
+
+    def validate_email(self, value):
+        if value:
+            qs = User.objects.filter(email__iexact=value)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.user.pk)
+            if qs.exists():
+                raise serializers.ValidationError("A user with this email already exists.")
+        return value
 
     def validate_profile_image(self, value):
         if value:
