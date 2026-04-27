@@ -7,6 +7,6 @@ const RAW_BASE_URL =
 
 export const BASE_URL =
   (typeof RAW_BASE_URL === "string" && RAW_BASE_URL.trim() ? RAW_BASE_URL.trim() : null) ||
-  "http://127.0.0.1:8000";
+  (typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:8000");
 
 export const API_BASE_URL = `${BASE_URL.replace(/\/+$/, "")}/api`;
