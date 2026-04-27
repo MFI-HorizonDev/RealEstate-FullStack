@@ -361,11 +361,18 @@ class Command(BaseCommand):
                 if category == 'CONDO':
                     amenity_pool = [a for a in amenity_pool if a != 'Elevator']
                 for j in range(random.randint(0, 3)):
+                    amenity_type = random.choice(['Basic', 'Luxury'])
+                    # Adhere to model constraints: Basic <= 100k, Luxury <= 250k
+                    if amenity_type == 'Basic':
+                        price = random.randint(10000, 100000)
+                    else:
+                        price = random.randint(50000, 250000)
+
                     Amenity.objects.create(
                         property=property_obj,
                         name=random.choice(amenity_pool),
-                        amenity_type=random.choice(['Basic', 'Luxury']),
-                        price=random.randint(50000, 300000),
+                        amenity_type=amenity_type,
+                        price=price,
                         added_by=random.choice(all_users) if all_users else None
                     )
 
